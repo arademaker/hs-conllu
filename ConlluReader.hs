@@ -4,8 +4,13 @@
  https://web.archive.org/web/20161105025307/http://ilk.uvt.nl/conll/
  CoNLL-U/UD format is defined here:
  http://universaldependencies.org/format.html
+ http://universaldependencies.org/v2/conll-u.html
 
 -- TODO: Convert String -> Text
+-- TODO: test if featsP parses correctly
+
+-- TODO: warn of spaces in fields where they are not allowed (FORM and
+-- LEMMA). do this in symbol function.
 
 --}
 
@@ -18,98 +23,115 @@ import Data.Char
 import Data.List
 --import Data.List.Split
 import Data.Maybe
+import Control.Monad
 import System.IO
+import Text.Parsec hiding (token,tokens)
 import Text.Parsec.Combinator
 import Text.ParserCombinators.Parsec.Char
+import Text.Parsec.String
 
 
-document :: String -> Parser [Sentence]
-document = do endBy1 sentence blankLine
+document :: Parser [Sentence]
+document = do ss <- endBy1 sentence blankLine
+              eof
+              return ss
 
-blankLine :: String -> Parser ()
+blankLine :: Parser ()
 blankLine = do litSpaces -- shouldn't exist, but no problem being lax
                          -- here
                newline
+               return ()
 
-litSpaces :: String -> Parser ()
+litSpaces :: Parser ()
 -- because spaces consumes \t and \n
-litSpaces = skipMany $ char ' '
+litSpaces = do skipMany $ char ' '
 
-sentence :: String -> Parser Sentence
+sentence :: Parser Sentence
 sentence = do cs <- many comment
               ts <- many1 token
               return Sentence { meta = cs, tokens = ts }
 
-comment :: String -> Parser Comment
+comment :: Parser Comment
 comment = do char '#'
-             litSpaces
-             key   <- many1 noneOf "=\n"
-             litSpaces
-             value <- many1 noneOf "\n"
-             litSpaces
-             return (key, value)
+             stringPair
 
-token :: String -> Parser Token
-token = do id      <- choice [mTokenId, sTokenId]
-           form    <- form
-           lemma   <- lemma
-           upostag <- upostag
-           xpostag <- xpostag
-           feats   <- feats
-           dephead <- dephead
-           deprel  <- deprel
-           deps    <- deps
-           misc    <- misc
-           -- check liftM5 and above for no variable parsing, see
-           -- graham's book
-           return mkToken id form lemma upostag xpostag feats dephead deprl deps misc
+stringPair :: Parser (String, String)
+stringPair = do
+  parsekeyValue '=' (stringNot "=\n\t ") stringWSpaces
 
-mTokenId :: String -> Parser (Tstart, Tend)
-mTokenId = do start <- many1 digit
-              char '-'
-              end <- many1 digit
-              tab
-              return (start, end)
+keyValue :: Char -> Parser a -> Parser b -> Parser (a, b)
+keyValue sep p q = do key   <- p
+                      char sep
+                      value <- q
+                      return (p, q)
 
-sTokenId :: String -> Parser Tid
-sTokenId = do ix <- many1 digit
+stringNot :: String -> Parser String
+-- [ ] second litSpaces is redundant
+stringNot s = do symbol . many1 $ noneOf s
+
+symbol :: Parser a -> Parser a
+symbol p = do litSpaces
+              x <- p
               litSpaces
-              tab
-              return ix
+              return x
 
-form :: Form
-form = symbol
+token :: Parser Token
+-- how to parse tabs elegantly?
+-- new combinator? no.
+-- check liftM5 and above for no variable parsing, see
+-- graham's book
+token = do id      <- sTokenId
+           idSep   <- optionMaybe $ choice [char '-', char '.']
+           idEnd   <- optionMaybe index
+           tab
+           form    <- formP
+           tab
+           lemma   <- lemmaP
+           tab
+           upostag <- upostagP
+           tab
+           xpostag <- xpostagP
+           tab
+           feats   <- featsP
+           tab
+           dephead <- depheadP
+           tab
+           deprel  <- deprelP
+           tab
+           deps    <- depsP
+           tab
+           misc    <- miscP
+           return $ mkToken id idSep idEnd form lemma upostag xpostag feats dephead deprel deps misc
 
-lemma :: Lemma
-lemma = symbol
+index :: Parser Index
+index = do ix <- many1 digit
+           return (read ix :: Index)
 
-xpostag :: Xpostag
-xpostag = symbol
+formP :: Parser Form
+formP = do stringWSpaces
 
-misc :: Misc
-misc = symbol
+lemmaP :: Parser Lemma
+lemmaP = do stringWSpaces
 
-symbol :: String -> Parser String
-symbol = do litSpaces
-            s <- many1 $ noneOf "\t\n"
-            litSpaces
-            tab
-            return s
+stringWSpaces :: Parser String
+stringWSpaces = do stringNot "\t\n"
 
-upostag :: String -> Parser PosTag
-upostag = do s <- symbol
-             return mkPosTag s
+upostagP :: Parser PosTag
+upostagP = do liftM mkPosTag $ stringWOSpaces
 
-feats' :: String -> Parser Feats
+xpostagP :: Parser Xpostag
+xpostagP = do stringWOSpaces
 
-feats :: String -> Parser Feats
-feats = do fs <- choice [notOption [] emptyField, feats']
-           return fs
+stringWOSpaces :: Parser String
+stringWOSpaces = do stringNot " \t\n"
 
-emptyField :: String -> Parser ()
-emptyField = do litSpaces
-                char '_'
-                litSpaces
+featsP :: Parser Feats
+-- featsP' with sepBy will return the correct result for the empty
+-- filed ('_'), but will report it the same as any other syntax error
+featsP = do mightBeEmpty [] featsP'
+
+mightBeEmpty :: a -> Parser a -> Parser a
+mightBeEmpty e p = do choice [notOption e emptyField, p]
 
 notOption :: a -> Parsec String u b -> Parsec String u a
 notOption x p = do r <- optionMaybe p
@@ -117,7 +139,30 @@ notOption x p = do r <- optionMaybe p
                      Just _ -> return x
                      Nothing -> do parserZero
 
-{-
+emptyField :: Parser ()
+emptyField = do symbol $ char '_'
+                return ()
+
+featsP' :: Parser Feats
+featsP' = do sepBy1 stringPair (char '|')
+
+depheadP :: Parser Index
+depheadP = do headIx <- symbol $ many1 digit
+              return (read headIx :: Index)
+
+deprelP :: Parser DepRel
+deprelP = do liftM mkDepRel string
+
+depsP :: Parser Deps
+depsP = do mightBeEmpty [] depsP'
+
+depsP' :: Parser Deps
+depsP' = do sepBy1 (keyValue ':' index deprelP) (char '|')
+
+miscP :: Parser Misc
+miscP = do stringWSpaces
+
+{--
 parseLine' :: [String] -> Maybe Token
 parseLine' (s1:s2:s3:s4:s5:s6:s7:s8:s9:s10:_)
   | isJust ix && all isDigit s7 && (na s9 || all isDigit s9) = 
