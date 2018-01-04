@@ -23,7 +23,6 @@ import Text.Parsec.Combinator
 import Text.ParserCombinators.Parsec.Char
 
 
-
 document :: String -> Parser [Sentence]
 document = do endBy1 sentence blankLine
 
@@ -51,36 +50,43 @@ comment = do char '#'
              return (key, value)
 
 token :: String -> Parser Token
-token = do id <- choice [mTokenId, sTokenId]
-           form <- form
-           lemma <- lemma
+token = do id      <- choice [mTokenId, sTokenId]
+           form    <- form
+           lemma   <- lemma
            upostag <- upostag
            xpostag <- xpostag
-           feats <- feats
+           feats   <- feats
            dephead <- dephead
-           deprel <- deprel
-           deps <- deps
-           misc <- misc
+           deprel  <- deprel
+           deps    <- deps
+           misc    <- misc
            -- check liftM5 and above for no variable parsing, see
            -- graham's book
            return mkToken id form lemma upostag xpostag feats dephead deprl deps misc
 
-mTokenId :: String -> Parser (Int, Int)
+mTokenId :: String -> Parser (Tstart, Tend)
 mTokenId = do start <- many1 digit
               char '-'
               end <- many1 digit
               tab
               return (start, end)
 
-sTokenId :: String -> Parser Int
+sTokenId :: String -> Parser Tid
 sTokenId = do ix <- many1 digit
               litSpaces
               tab
               return ix
 
+form :: Form
 form = symbol
+
+lemma :: Lemma
 lemma = symbol
+
+xpostag :: Xpostag
 xpostag = symbol
+
+misc :: Misc
 misc = symbol
 
 symbol :: String -> Parser String
@@ -96,7 +102,7 @@ upostag = do s <- symbol
 
 feats' :: String -> Parser Feats
 
-feats :: String -> Parser [String]
+feats :: String -> Parser Feats
 feats = do fs <- choice [notOption [] emptyField, feats']
            return fs
 

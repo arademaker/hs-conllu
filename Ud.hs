@@ -2,8 +2,8 @@ module Ud where
 
 data Sentence = Sentence
   { --lif     :: Int -- line in file -- how to obtain this? introspect parsec
-  , meta    :: [Comment]
-  , tokens  :: [Token]
+  , meta      :: [Comment]
+  , tokens    :: [Token]
 --  , mtokens :: [Token] -- is this needed?
   } deriving (Eq, Show)
 
@@ -11,23 +11,31 @@ type Comment = (String, String)
 
 -- [ ] add empty token
 data Token
-  = SToken { id :: Int
-           , form :: String
-           , lemma :: [String]
+  = SToken { id      :: Tid
+           , form    :: Form
+           , lemma   :: Lemma
            , upostag :: PosTag
            , xpostag :: String
-           , feats :: [String]
-           , dephead :: Int
-           , deprel :: DepRel
-           , deps :: [(Int, DepRel)]
-           , misc :: String }
-  | MToken { start :: Int
-           , end :: Int
-           , form :: String
-           , misc :: String }
+           , feats   :: Feats
+           , dephead :: Dephead
+           , deprel  :: DepRel
+           , deps    :: Deps
+           , misc    :: Misc }
+  | MToken { start :: Tstart
+           , end   :: Tend
+           , form  :: Form
+           , misc  :: Misc }
   deriving (Eq, Show)
 
-emptyField = "_"
+type Tid      = Int
+type Form    = String
+type Lemma   = [String]
+type Feats   = [(String, String)]
+type Dephead = Int
+type Deps    = [(Int, DepRel)]
+type Misc    = String
+type Tstart  = Int
+type Tend    = Int
 
 data DepRel
   = Acl
@@ -35,7 +43,7 @@ data DepRel
   | Advmod
   | Amod
   | Appos
-  | Aux
+  | AuxDR
   | Case
   | Cc
   | Ccomp
@@ -45,7 +53,7 @@ data DepRel
   | Cop
   | Csubj
   | Dep
-  | Det
+  | DetDR
   | Discourse
   | Dislocated
   | Expl
@@ -62,7 +70,7 @@ data DepRel
   | Obl
   | Orphan
   | Parataxis
-  | Punct
+  | PunctDR
   | Reparandum
   | Root
   | Vocative
@@ -73,18 +81,37 @@ data PosTag
   = Adj
   | Adp
   | Adv
-  | POSAux
+  | AuxPOS -- POS because there is a Aux in deprel
   | Cconj
-  | POSDet
+  | DetPOS
   | Intj
   | Noun
   | Num
   | Part
   | Pron
   | Propn
-  | POSPunct
+  | PunctPOS
   | Sconj
   | Sym
   | Verb
   | X
   deriving (Eq, Show)
+
+mkPosTag :: String -> PosTag
+mkPosTag "Adj"      = Adj
+mkPosTag "Adp"      = Adp
+mkPosTag "Adv"      = Adv
+mkPosTag "AuxPOs"   = AuxPOS
+mkPosTag "Cconj"    = Cconj
+mkPosTag "DetPOS"   = DetPOS
+mkPosTag "Intj"     = Intj
+mkPosTag "Noun"     = Noun
+mkPosTag "Num"      = Num
+mkPosTag "Part"     = Part
+mkPosTag "Pron"     = Pron
+mkPosTag "Propn"    = Propn
+mkPosTag "PunctPOS" = PunctPOS
+mkPosTag "Sconj"    = Sconj
+mkPosTag "Sym"      = Sym
+mkPosTag "Verb"     = Verb
+mkPosTag "X"        = X
