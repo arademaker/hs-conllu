@@ -52,15 +52,15 @@ comment = do char '#'
 
 token :: String -> Parser Token
 token = do id <- choice [mTokenId, sTokenId]
-           form <- formP
-           lemma <- lemmaP
-           upostag <- upostagP
-           xpostag <- xpostagP
-           feats <- featsP
-           dephead <- depheadP
-           deprel <- deprelP
-           deps <- depsP
-           misc <- miscP
+           form <- form
+           lemma <- lemma
+           upostag <- upostag
+           xpostag <- xpostag
+           feats <- feats
+           dephead <- dephead
+           deprel <- deprel
+           deps <- deps
+           misc <- misc
            -- check liftM5 and above for no variable parsing, see
            -- graham's book
            return mkToken id form lemma upostag xpostag feats dephead deprl deps misc
@@ -93,7 +93,24 @@ symbol = do litSpaces
 upostag :: String -> Parser PosTag
 upostag = do s <- symbol
              return mkPosTag s
--- stopped writing mkPosTag
+
+feats' :: String -> Parser Feats
+
+feats :: String -> Parser [String]
+feats = do fs <- choice [notOption [] emptyField, feats']
+           return fs
+
+emptyField :: String -> Parser ()
+emptyField = do litSpaces
+                char '_'
+                litSpaces
+
+notOption :: a -> Parsec String u b -> Parsec String u a
+notOption x p = do r <- optionMaybe p
+                   case r of
+                     Just _ -> return x
+                     Nothing -> do parserZero
+
 {-
 parseLine' :: [String] -> Maybe Token
 parseLine' (s1:s2:s3:s4:s5:s6:s7:s8:s9:s10:_)
