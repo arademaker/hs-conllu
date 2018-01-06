@@ -1,12 +1,20 @@
-{--
-
-- TODO: validate input of mk*Token functions
-
---}
 module Ud where
 
+{--
+
+- TODO: validate input of mk*Token functions https://github.com/tonymorris/validation, https://github.com/mavenraven/validations, https://ro-che.info/articles/2015-05-02-smarter-validation
+
+--}
+
+---
+-- imports
+
+-- stdlib
 import Data.Maybe
 
+
+---
+-- type and data declarations
 data Sentence = Sentence
   { --lif     :: Int, -- line in file -- how to obtain this? introspect parsec
    meta      :: [Comment]
@@ -21,36 +29,44 @@ data Token
            , form    :: Form
            , lemma   :: Lemma
            , upostag :: PosTag
-           , xpostag :: String
+           , xpostag :: Xpostag
            , feats   :: Feats
            , dephead :: Dephead
            , deprel  :: DepRel
-           , deps    :: Deps
-           , misc    :: Misc }
+           , deps    :: Maybe Deps
+           , misc    :: Misc
+           }
   | MToken { start :: Index
            , end   :: Index
            , form  :: Form
-           , misc  :: Misc }
-  | EToken { ix      :: Index
-           , childIx :: Index
-           , form    :: Form
-           , lemma   :: Lemma
-           , upostag :: PosTag
-           , xpostag :: String
-           , feats   :: Feats
+           , misc  :: Misc
+           -- other values should be empty
+           }
+  | EToken { ix       :: Index
+           , childIx  :: Index
+           , eForm    :: Maybe Form
+           , eLemma   :: Maybe Lemma
+           , eUpostag :: Maybe PosTag
+           , xpostag  :: Xpostag
+           , feats    :: Feats
            -- no head and deprel -- same as id token
-           , deps    :: Deps
-           , misc    :: Misc }
+           , eDeps    :: Deps
+           , misc     :: Misc
+           -- field with prefix 'e' represents the fact that it is
+           -- different from the one in SToken (can be empty in EToken
+           -- but not in SToken, or vice-versa)
+           }
   deriving (Eq, Show)
 
 type Index   = Int
+type IxSep   = Maybe Char
 type Form    = String
 type Lemma   = String
-type Xpostag = String
+type Xpostag = Maybe String
 type Feats   = [StringPair]
 type Dephead = Index
 type Deps    = [(Index, DepRel)]
-type Misc    = String
+type Misc    = Maybe String
 
 data DepRel
   = Acl
@@ -112,8 +128,11 @@ data PosTag
   | X
   deriving (Eq, Show)
 
---
----- constructor functions
+---
+-- constructor functions
+mkSentence :: [Comment] -> [Token] -> Sentence
+mkSentence cs ts = Sentence { meta = cs, tokens = ts }
+
 mkDepRel :: String -> DepRel
 mkDepRel "Acl"        = Acl
 mkDepRel "Advcl"      = Advcl
@@ -172,41 +191,22 @@ mkPosTag "Sym"      = Sym
 mkPosTag "Verb"     = Verb
 mkPosTag "X"        = X
 
-mkToken :: Index -> Maybe Char -> Maybe Index -> Form -> Lemma
-  -> PosTag -> Xpostag -> Feats -> Dephead -> DepRel -> Deps -> Misc
-  -> Token
+mkToken :: Index -> IxSep -> Maybe Index -> Maybe Form
+  -> Maybe Lemma -> Maybe PosTag -> Xpostag -> Feats
+  -> Dephead -> DepRel -> Maybe Deps -> Misc -> Token
 mkToken ix sep = case sep of
+  Nothing  -> mkSToken ix
   Just '-' -> mkMToken ix
   Just '.' -> mkEToken ix
-  Nothing  -> mkSToken ix
 
-mkMToken :: Index -> Maybe Index -> Form -> Lemma -> PosTag -> Xpostag
-  -> Feats -> Dephead -> DepRel -> Deps -> Misc -> Token
-mkMToken s e fo l up xp fe h dr d m =
-  MToken {start = s, end = fromJust e, form = fo, misc = m}
-
-mkEToken :: Index -> Maybe Index -> Form -> Lemma -> PosTag -> Xpostag
-  -> Feats -> Dephead -> DepRel -> Deps -> Misc -> Token
-mkEToken i ci fo l up xp fe h dr d m =
-  EToken
-  { ix      = i
-  , childIx = fromJust ci
-  , form    = fo
-  , lemma   = l
-  , upostag = up
-  , xpostag = xp
-  , feats   = fe
-  , deps    = d
-  , misc    = m
-  }
-
-mkSToken :: Index -> Maybe Index -> Form -> Lemma -> PosTag -> Xpostag
-  -> Feats -> Dephead -> DepRel -> Deps -> Misc -> Token
+mkSToken :: Index -> Maybe Index -> Maybe Form -> Maybe Lemma
+  -> Maybe PosTag -> Xpostag -> Feats -> Dephead -> DepRel -> Maybe Deps
+  -> Misc -> Token
 mkSToken i ci fo l up xp fe h dr d m =
   SToken { ix      = i
-         , form    = fo
-         , lemma   = l
-         , upostag = up
+         , form    = fromJust fo
+         , lemma   = fromJust l
+         , upostag = fromJust up
          , xpostag = xp
          , feats   = fe
          , dephead = h
@@ -214,3 +214,25 @@ mkSToken i ci fo l up xp fe h dr d m =
          , deps    = d
          , misc    = m
          }
+
+mkMToken :: Index -> Maybe Index -> Maybe Form -> Maybe Lemma
+  -> Maybe PosTag -> Xpostag -> Feats -> Dephead -> DepRel -> Maybe Deps
+  -> Misc -> Token
+mkMToken s e fo l up xp fe h dr d m =
+  MToken {start = s, end = fromJust e, form = fromJust fo, misc = m}
+
+mkEToken :: Index -> Maybe Index -> Maybe Form -> Maybe Lemma
+  -> Maybe PosTag -> Xpostag -> Feats -> Dephead -> DepRel -> Maybe Deps
+  -> Misc -> Token
+mkEToken i ci fo l up xp fe h dr d m =
+  EToken
+  { ix       = i
+  , childIx  = fromJust ci
+  , eForm    = fo
+  , eLemma   = l
+  , eUpostag = up
+  , xpostag  = xp
+  , feats    = fe
+  , eDeps    = fromJust d
+  , misc     = m
+  }
