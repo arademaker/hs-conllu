@@ -80,28 +80,28 @@ token :: Parser Token
 -- new combinator? no.
 -- check liftM5 and above for no variable parsing, see
 -- graham's book
-token = do id      <- sTokenId
-           idSep   <- optionMaybe $ choice [char '-', char '.']
-           idEnd   <- optionMaybe index
+token = do ix    <- sTokenId
+           ixSep <- optionMaybe $ choice [char '-', char '.']
+           ixEnd <- optionMaybe index
            tab
-           form    <- formP
+           fo    <- formP
            tab
-           lemma   <- lemmaP
+           l     <- lemmaP
            tab
-           upostag <- upostagP
+           up    <- upostagP
            tab
-           xpostag <- xpostagP
+           xp    <- xpostagP
            tab
-           feats   <- featsP
+           fe    <- featsP
            tab
-           dephead <- depheadP
+           h     <- depheadP
            tab
-           deprel  <- deprelP
+           dr    <- deprelP
            tab
-           deps    <- depsP
+           d     <- depsP
            tab
-           misc    <- miscP
-           return $ mkToken id idSep idEnd form lemma upostag xpostag feats dephead deprel deps misc
+           m     <- miscP
+           return $ mkToken ix ixSep ixEnd fo l up xp f h dr d m
 
 index :: Parser Index
 index = do ix <- many1 digit
@@ -165,8 +165,8 @@ miscP = do stringWSpaces
 {--
 parseLine' :: [String] -> Maybe Token
 parseLine' (s1:s2:s3:s4:s5:s6:s7:s8:s9:s10:_)
-  | isJust ix && all isDigit s7 && (na s9 || all isDigit s9) = 
-      Just $ Token 
+  | isJust ix && all isDigit s7 && (na s9 || all isDigit s9) =
+      Just $ Token
       { ix       = fromJust ix
       , form     = s2
       , lemma    = if s3==unk then [] else splitOn "|" s3
@@ -174,7 +174,7 @@ parseLine' (s1:s2:s3:s4:s5:s6:s7:s8:s9:s10:_)
       , postag   = s5
       , feats    = if na s6 then [] else splitOn "|" s6
       , dephead  = read s7
-      , deprel   = s8 
+      , deprel   = s8
       , pdephead = if na s9  then Nothing else Just $ read s9
       , pdeprel  = if na s10 then Nothing else Just s10 }
   | otherwise   = Nothing
@@ -185,9 +185,9 @@ parseLine' _ = Nothing
 
 -- skips sentences that contain unparsable lines
 readCorpusStr :: String -> Corpus
-readCorpusStr = 
-  mapMaybe (fmap mkSentence . sequence . map parseLine) . 
-  split (dropInitBlank . dropFinalBlank . dropDelims . condense $ whenElt emptyLine) . 
+readCorpusStr =
+  mapMaybe (fmap mkSentence . sequence . map parseLine) .
+  split (dropInitBlank . dropFinalBlank . dropDelims . condense $ whenElt emptyLine) .
   lines
   where emptyLine = null . words
 
@@ -196,7 +196,7 @@ readCorpus f = readCorpusStr <$> readFile f
 
 showCorpus :: Corpus -> String
 showCorpus = unlines . map (unlines . map showToken . sentenceTokens)
-  where showToken t = intercalate "\t" $ map (\f -> f t) 
+  where showToken t = intercalate "\t" $ map (\f -> f t)
           [show . ix, form, showLemma . lemma, cpostag,
            postag, const "_", show . dephead, deprel,
            fromMaybe "_" . fmap show . pdephead, fromMaybe "_" . pdeprel]

@@ -1,23 +1,23 @@
 {--
 
-stopped at mk*Token functions
+- TODO: validate input of mk*Token functions
 
 --}
 module Ud where
+
+import Data.Maybe
 
 data Sentence = Sentence
   { --lif     :: Int, -- line in file -- how to obtain this? introspect parsec
    meta      :: [Comment]
   , tokens    :: [Token]
---  , mtokens :: [Token] -- is this needed?
   } deriving (Eq, Show)
 
 type Comment    = StringPair
 type StringPair = (String, String)
 
--- [ ] add empty token
 data Token
-  = SToken { id      :: Index
+  = SToken { ix      :: Index
            , form    :: Form
            , lemma   :: Lemma
            , upostag :: PosTag
@@ -31,8 +31,8 @@ data Token
            , end   :: Index
            , form  :: Form
            , misc  :: Misc }
-  | EToken { id      :: Index
-           , childId :: Index
+  | EToken { ix      :: Index
+           , childIx :: Index
            , form    :: Form
            , lemma   :: Lemma
            , upostag :: PosTag
@@ -175,8 +175,42 @@ mkPosTag "X"        = X
 mkToken :: Index -> Maybe Char -> Maybe Index -> Form -> Lemma
   -> PosTag -> Xpostag -> Feats -> Dephead -> DepRel -> Deps -> Misc
   -> Token
-mkToken id sep = case sep of
-  Just '-' -> mkMToken id
-  Just '.' -> mkEToken id
-  Nothing  -> mkSToken id
+mkToken ix sep = case sep of
+  Just '-' -> mkMToken ix
+  Just '.' -> mkEToken ix
+  Nothing  -> mkSToken ix
 
+mkMToken :: Index -> Maybe Index -> Form -> Lemma -> PosTag -> Xpostag
+  -> Feats -> Dephead -> DepRel -> Deps -> Misc -> Token
+mkMToken s e fo l up xp fe h dr d m =
+  MToken {start = s, end = fromJust e, form = fo, misc = m}
+
+mkEToken :: Index -> Maybe Index -> Form -> Lemma -> PosTag -> Xpostag
+  -> Feats -> Dephead -> DepRel -> Deps -> Misc -> Token
+mkEToken i ci fo l up xp fe h dr d m =
+  EToken
+  { ix      = i
+  , childIx = fromJust ci
+  , form    = fo
+  , lemma   = l
+  , upostag = up
+  , xpostag = xp
+  , feats   = fe
+  , deps    = d
+  , misc    = m
+  }
+
+mkSToken :: Index -> Maybe Index -> Form -> Lemma -> PosTag -> Xpostag
+  -> Feats -> Dephead -> DepRel -> Deps -> Misc -> Token
+mkSToken i ci fo l up xp fe h dr d m =
+  SToken { ix      = i
+         , form    = fo
+         , lemma   = l
+         , upostag = up
+         , xpostag = xp
+         , feats   = fe
+         , dephead = h
+         , deprel  = dr
+         , deps    = d
+         , misc    = m
+         }
