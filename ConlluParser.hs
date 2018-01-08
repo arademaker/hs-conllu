@@ -1,4 +1,4 @@
-module ConlluReader where
+module ConlluParser where
 
 {--
 
@@ -20,7 +20,7 @@ module ConlluReader where
 -- imports
 
 -- lib imports
-import Ud
+import UD
 
 -- stdlib
 import Control.Monad
