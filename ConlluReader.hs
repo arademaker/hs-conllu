@@ -3,30 +3,35 @@ module ConlluReader where
 ---
 -- imports
 import UD
-from ConlluParser import document
+import ConlluParser (document)
 
-import System.IO
-import System.Environment
 import System.Directory
-import System.Exit
+import System.FilePath
+import System.IO
 
 import Text.Parsec.String
 
 readConlluFile :: FilePath -> IO [Sentence]
-readConlluFile f = do parseFromFile document f >>= either report return
+readConlluFile f = do r <- parseFromFile document f
+                      case r of
+                        -- how to handle exceptions properly?
+                        Left err  -> do {print err ; return []}
+                        Right ss  -> return ss
 
 readDirectory :: FilePath -> IO [Sentence]
-readDirectory d = do let fs = listDirectory d
-                     concatMap readConlluFile fs
+readDirectory d = do fs' <- listDirectory d
+                     let fs = map (d </>) fs'
+                     ss <- mapM readConlluFile fs
+                     return $ concat ss
 
 readConllu :: FilePath -> IO [Sentence]
-readConllu fp = do return $ case fp of
-                              doesFileExist fp -> readConlluFile fp
-                              doesDirectoryExist fp -> readDirectory fp
-                              _ -> []
+readConllu fp = do f <- doesFileExist fp
+                   if' f (readConlluFile fp) $
+                     do d <- doesDirectoryExist fp
+                        if' d (readDirectory fp) (return [])
 
 ---
 -- utility functions
-report :: (Either ParseError a) -> IO ()
-report err = do hPutStrLn stderr $ "Error: " ++ show err
-                exitFailure
+if' :: Bool -> a -> a -> a
+if' True  x _ = x
+if' False _ y = y
