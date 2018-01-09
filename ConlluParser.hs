@@ -39,53 +39,34 @@ import Text.ParserCombinators.Parsec.Char
 ---
 -- conllu parsers
 document :: Parser [Sentence]
-document = do ss <- sepBy1 sentence blankLine
-              eof
-              return ss
+document = do sepBy1 sentence blankLine <* eof
 
 blankLine :: Parser ()
-blankLine = do litSpaces -- shouldn't exist, but no problem being lax
-                         -- here
-               newline
-               return ()
+blankLine = do litSpaces <* newline -- shouldn't exist, but no problem
+                                    -- being lax here
 
 sentence :: Parser Sentence
 sentence = do liftM2 Sentence (many comment) (many1 token)
 
 comment :: Parser Comment
 comment = do char '#'
-             c <- commentPair
-             newline
-             return c
+             commentPair <* newline
 
 token :: Parser Token
--- how to parse tabs elegantly?
--- new combinator? no.
 -- check liftM5 and above for no variable parsing, see
 -- graham's book
-token = do ix    <- index
-           ixSep <- optionMaybe indexSep
-           ixEnd <- optionMaybe index
-           tab
-           fo    <- maybeEmpty formP
-           tab
-           l     <- maybeEmpty lemmaP
-           tab
-           up    <- maybeEmpty upostagP
-           tab
-           xp    <- xpostagP
-           tab
-           fe    <- featsP
-           tab
-           h     <- maybeEmpty depheadP
-           tab
-           dr    <- maybeEmpty deprelP
-           tab
-           d     <- depsP
-           tab
-           m     <- miscP
-           newline
-           return $ mkToken ix ixSep ixEnd fo l up xp fe h dr d m
+token = do mkToken <$> index
+             <*> optionMaybe indexSep
+             <*> optionMaybe index <* tab
+             <*> maybeEmpty formP <* tab
+             <*> maybeEmpty lemmaP <* tab
+             <*> maybeEmpty upostagP <* tab
+             <*> xpostagP <* tab
+             <*> featsP <* tab
+             <*> maybeEmpty depheadP <* tab
+             <*> maybeEmpty deprelP <* tab
+             <*> depsP <* tab
+             <*> miscP <* newline
 
 emptyField :: Parser (Maybe a)
 emptyField = do char '_'
@@ -117,7 +98,7 @@ depheadP :: Parser Index
 depheadP = do symbol index
 
 deprelP :: Parser DepRel
-deprelP = do liftM mkDepRel (many1 letter)
+deprelP = do liftM mkDepRel $ many1 letter
 
 depsP :: Parser Deps
 depsP = do listP $ listPair ':' index deprelP
@@ -158,10 +139,7 @@ keyValue sep p q = do key   <- p
                       return (key, value)
 
 symbol :: Parser a -> Parser a
-symbol p = do litSpaces
-              x <- p
-              litSpaces
-              return x
+symbol p = do litSpaces *> p <* litSpaces
 
 maybeEmpty :: Parser a -> Parser (Maybe a)
 maybeEmpty p = do emptyField <|> liftM Just p
