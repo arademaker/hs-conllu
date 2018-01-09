@@ -4,6 +4,8 @@ module UD where
 
 - TODO: validate input of mk*Token functions https://github.com/tonymorris/validation, https://github.com/mavenraven/validations, https://ro-che.info/articles/2015-05-02-smarter-validation
 
+- should I remove Maybe's where I can ([] as Nothing)?
+
 --}
 
 ---
@@ -12,6 +14,9 @@ module UD where
 -- stdlib
 import Data.Char
 import Data.Maybe
+import Data.Ord
+import Data.List
+import Data.Tree
 
 ---
 -- type and data declarations
@@ -49,7 +54,7 @@ data Token
            , eUpostag :: Maybe PosTag
            , xpostag  :: Xpostag
            , feats    :: Feats
-           -- no head and deprel -- same as id token
+           -- heads and deprels specified in deps
            , deps     :: Deps
            , misc     :: Misc
            -- field with prefix 'e' represents the fact that it is
@@ -65,10 +70,11 @@ type Lemma   = String
 type Xpostag = Maybe String
 type Feats   = [StringPair]
 type Dephead = Index
+type DepRel  = (Dep,String)
 type Deps    = [(Index, DepRel)]
 type Misc    = Maybe String
 
-data DepRel
+data Dep
   = ACL
   | ADVCL
   | ADVMOD
@@ -128,48 +134,55 @@ data PosTag
   | X
   deriving (Eq, Show)
 
+type TTree  = Tree Token -- only STokens
+
+root :: TTree
+root = Node (EToken 0 0 Nothing Nothing Nothing Nothing [] [] Nothing) []
+
+type ETree = (TTree, [Token]) -- enhanced tree
+
 ---
 -- constructor functions
-mkDepRel :: String -> DepRel
-mkDepRel = mkDepRel' . upcaseString
+mkDep :: String -> Dep
+mkDep = mkDep' . upcaseString
   where
-    mkDepRel' "ACL"        = ACL
-    mkDepRel' "ADVCL"      = ADVCL
-    mkDepRel' "ADVMOD"     = ADVMOD
-    mkDepRel' "AMOD"       = AMOD
-    mkDepRel' "APPOS"      = APPOS
-    mkDepRel' "AUX"        = AUXdr
-    mkDepRel' "CASE"       = CASE
-    mkDepRel' "CC"         = CC
-    mkDepRel' "CCOMP"      = CCOMP
-    mkDepRel' "CLF"        = CLF
-    mkDepRel' "COMPOUND"   = COMPOUND
-    mkDepRel' "CONJ"       = CONJ
-    mkDepRel' "COP"        = COP
-    mkDepRel' "CSUBJ"      = CSUBJ
-    mkDepRel' "DEP"        = DEP
-    mkDepRel' "DET"        = DETdr
-    mkDepRel' "DISCOURSE"  = DISCOURSE
-    mkDepRel' "DISLOCATED" = DISLOCATED
-    mkDepRel' "EXPL"       = EXPL
-    mkDepRel' "FIXED"      = FIXED
-    mkDepRel' "FLAT"       = FLAT
-    mkDepRel' "GOESWITH"   = GOESWITH
-    mkDepRel' "IOBJ"       = IOBJ
-    mkDepRel' "LIST"       = LIST
-    mkDepRel' "MARK"       = MARK
-    mkDepRel' "NMOD"       = NMOD
-    mkDepRel' "NSUBJ"      = NSUBJ
-    mkDepRel' "NUMMOD"     = NUMMOD
-    mkDepRel' "OBJ"        = OBJ
-    mkDepRel' "OBL"        = OBL
-    mkDepRel' "ORPHAN"     = ORPHAN
-    mkDepRel' "PARATAXIS"  = PARATAXIS
-    mkDepRel' "PUNCT"      = PUNCTdr
-    mkDepRel' "REPARANDUM" = REPARANDUM
-    mkDepRel' "ROOT"       = ROOT
-    mkDepRel' "VOCATIVE"   = VOCATIVE
-    mkDepRel' "XCOMP"      = XCOMP
+    mkDep' "ACL"        = ACL
+    mkDep' "ADVCL"      = ADVCL
+    mkDep' "ADVMOD"     = ADVMOD
+    mkDep' "AMOD"       = AMOD
+    mkDep' "APPOS"      = APPOS
+    mkDep' "AUX"        = AUXdr
+    mkDep' "CASE"       = CASE
+    mkDep' "CC"         = CC
+    mkDep' "CCOMP"      = CCOMP
+    mkDep' "CLF"        = CLF
+    mkDep' "COMPOUND"   = COMPOUND
+    mkDep' "CONJ"       = CONJ
+    mkDep' "COP"        = COP
+    mkDep' "CSUBJ"      = CSUBJ
+    mkDep' "DEP"        = DEP
+    mkDep' "DET"        = DETdr
+    mkDep' "DISCOURSE"  = DISCOURSE
+    mkDep' "DISLOCATED" = DISLOCATED
+    mkDep' "EXPL"       = EXPL
+    mkDep' "FIXED"      = FIXED
+    mkDep' "FLAT"       = FLAT
+    mkDep' "GOESWITH"   = GOESWITH
+    mkDep' "IOBJ"       = IOBJ
+    mkDep' "LIST"       = LIST
+    mkDep' "MARK"       = MARK
+    mkDep' "NMOD"       = NMOD
+    mkDep' "NSUBJ"      = NSUBJ
+    mkDep' "NUMMOD"     = NUMMOD
+    mkDep' "OBJ"        = OBJ
+    mkDep' "OBL"        = OBL
+    mkDep' "ORPHAN"     = ORPHAN
+    mkDep' "PARATAXIS"  = PARATAXIS
+    mkDep' "PUNCT"      = PUNCTdr
+    mkDep' "REPARANDUM" = REPARANDUM
+    mkDep' "ROOT"       = ROOT
+    mkDep' "VOCATIVE"   = VOCATIVE
+    mkDep' "XCOMP"      = XCOMP
 
 mkPosTag :: String -> PosTag
 mkPosTag = mkPosTag' . upcaseString
@@ -237,6 +250,42 @@ mkEToken i ci fo l up xp fe h dr d m =
   , deps     = d
   , misc     = m
   }
+
+toETree :: Sentence -> ETree
+toETree s =
+  let (sts, mts) = partition isSToken $ tokens s
+  in (tokensToTTree $ sortByDepRel sts, mts)
+
+isSToken :: Token -> Bool
+isSToken SToken{} = True
+isSToken _        = False
+
+tokensToTTree :: [Token] -> TTree
+tokensToTTree ts = foldl' addToken root ts
+
+addToken :: TTree -> Token -> TTree
+addToken (Node p cs) t@(SToken{dephead = dh}) =
+  if dh == ix p
+    then Node p $ (Node t []):cs
+    else Node p $ fmap (\c -> addToken c t) cs
+
+sortByDepRel :: [Token] -> [Token]
+sortByDepRel = sortBy sortByDepRel'
+  where
+    sortByDepRel' SToken{dephead=i1} SToken{dephead=i2} = compare i1 i2
+    sortByDepRel' _ _ = EQ
+
+fromETree :: ETree -> [Token]
+--[] sorted list not implemented (use insertBy for meta tokens)
+fromETree et =
+  let (tt, mts) = et
+  in mts ++ flatten tt
+
+drawTTree :: TTree -> String
+drawTTree tt = drawTree $ fmap showSToken tt
+  where showSToken t = case t of
+          (SToken{ix=ix,form=fo}) -> (show ix :: String) ++ "_" ++ fo
+          EToken{} -> "ROOT"
 
 ---
 -- utility functions

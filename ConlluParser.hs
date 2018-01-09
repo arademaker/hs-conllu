@@ -14,6 +14,9 @@ module ConlluParser where
 -- TODO: warn of spaces in fields where they are not allowed (FORM and
 -- LEMMA). do this in symbol function.
 
+-- TODO: check what's the purpose of the '_' in this MISC field:
+-- '_|SpaceAfter=Yes' should it be allowed?
+
 --}
 
 ---
@@ -39,18 +42,18 @@ import Text.ParserCombinators.Parsec.Char
 ---
 -- conllu parsers
 document :: Parser [Sentence]
-document = do sepBy1 sentence blankLine <* eof
+document = do endBy1 sentence blankLine <* eof
 
 blankLine :: Parser ()
-blankLine = do litSpaces <* newline -- shouldn't exist, but no problem
-                                    -- being lax here
+blankLine = do litSpaces <* newline -- spaces shouldn't exist, but no
+                                    -- problem being lax here (I think)
 
 sentence :: Parser Sentence
 sentence = do liftM2 Sentence (many comment) (many1 token)
 
 comment :: Parser Comment
 comment = do char '#'
-             commentPair <* newline
+             (commentLine <|> commentPair) <* newline
 
 token :: Parser Token
 -- check liftM5 and above for no variable parsing, see
@@ -97,8 +100,13 @@ featsP = do listP $ listPair '=' (stringNot "=") (stringNot "\t|")
 depheadP :: Parser Index
 depheadP = do symbol index
 
+depP :: Parser Dep
+depP = do liftM mkDep $ many1 letter
+
 deprelP :: Parser DepRel
-deprelP = do liftM mkDepRel $ many1 letter
+deprelP = do dep <- depP
+             st  <- option [] $ char ':' *> many1 letter
+             return (dep,st)
 
 depsP :: Parser Deps
 depsP = do listP $ listPair ':' index deprelP
@@ -112,9 +120,13 @@ litSpaces :: Parser ()
 -- because spaces consumes \t and \n
 litSpaces = do skipMany $ char ' '
 
-commentPair :: Parser (String, String)
+commentPair :: Parser Comment
 commentPair = do
-  keyValue '=' (stringNot "=\n \t") stringWSpaces
+  keyValue '=' (stringNot "=\n\t") stringWSpaces
+
+commentLine :: Parser Comment
+commentLine = do c <- stringWSpaces
+                 return (c,[])
 
 listPair :: Char -> Parser a -> Parser b -> Parser [(a, b)]
 listPair sep p q = do
@@ -149,13 +161,3 @@ listP :: Parser [a] -> Parser [a]
 -- many will return the correct result for the empty filed ('_'), but
 -- will report it the same as any other syntax error
 listP p = do liftM (fromMaybe []) $ maybeEmpty p
-
----
--- main
-main :: IO ()
-main = do
-  [filename] <- getArgs
-  result <- parseFromFile document filename
-  case result of
-    Left err -> print err
-    Right ss -> putStr $ show ss
