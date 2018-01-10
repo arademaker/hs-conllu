@@ -17,6 +17,8 @@ module ConlluParser where
 -- TODO: check what's the purpose of the '_' in this MISC field:
 -- '_|SpaceAfter=Yes' should it be allowed?
 
+-- TODO: create non validating parser: count 10 (stringNot "\t\n" <* tab)
+
 --}
 
 ---
@@ -53,7 +55,7 @@ sentence = do liftM2 Sentence (many comment) (many1 token)
 
 comment :: Parser Comment
 comment = do char '#'
-             (commentLine <|> commentPair) <* newline
+             commentPair <* newline
 
 token :: Parser Token
 -- check liftM5 and above for no variable parsing, see
@@ -61,13 +63,13 @@ token :: Parser Token
 token = do mkToken <$> index
              <*> optionMaybe indexSep
              <*> optionMaybe index <* tab
-             <*> maybeEmpty formP <* tab
-             <*> maybeEmpty lemmaP <* tab
-             <*> maybeEmpty upostagP <* tab
+             <*> formP <* tab
+             <*> lemmaP <* tab
+             <*> upostagP <* tab
              <*> xpostagP <* tab
              <*> featsP <* tab
-             <*> maybeEmpty depheadP <* tab
-             <*> maybeEmpty deprelP <* tab
+             <*> depheadP <* tab
+             <*> deprelP <* tab
              <*> depsP <* tab
              <*> miscP <* newline
 
@@ -83,13 +85,16 @@ indexSep :: Parser IxSep
 indexSep = do choice [char '-', char '.']
 
 formP :: Parser Form
-formP = do stringWSpaces
+formP = do maybeEmpty stringWSpaces
 
 lemmaP :: Parser Lemma
-lemmaP = do stringWSpaces
+lemmaP = do maybeEmpty stringWSpaces
 
 upostagP :: Parser PosTag
-upostagP = do liftM mkPosTag stringWOSpaces
+upostagP = do maybeEmpty upostagP'
+  where
+    upostagP' :: Parser Pos
+    upostagP' = do liftM mkPos stringWOSpaces
 
 xpostagP :: Parser Xpostag
 xpostagP = do maybeEmpty stringWOSpaces
@@ -97,19 +102,22 @@ xpostagP = do maybeEmpty stringWOSpaces
 featsP :: Parser Feats
 featsP = do listP $ listPair '=' (stringNot "=") (stringNot "\t|")
 
-depheadP :: Parser Index
-depheadP = do symbol index
-
-depP :: Parser Dep
-depP = do liftM mkDep $ many1 letter
+depheadP :: Parser Dephead
+depheadP = do maybeEmpty $ symbol index
 
 deprelP :: Parser DepRel
-deprelP = do dep <- depP
-             st  <- option [] $ char ':' *> many1 letter
-             return (dep,st)
+deprelP = do maybeEmpty $ deprelP'
+
+deprelP' :: Parser (Dep, Subtype)
+deprelP' = do dep <- depP
+              st  <- option [] $ char ':' *> many1 letter
+              return (dep,st)
+  where
+    depP :: Parser Dep
+    depP = do liftM mkDep $ many1 letter
 
 depsP :: Parser Deps
-depsP = do listP $ listPair ':' index deprelP
+depsP = do listP $ listPair ':' index deprelP'
 
 miscP :: Parser Misc
 miscP = do maybeEmpty stringWSpaces
@@ -122,11 +130,7 @@ litSpaces = do skipMany $ char ' '
 
 commentPair :: Parser Comment
 commentPair = do
-  keyValue '=' (stringNot "=\n\t") stringWSpaces
-
-commentLine :: Parser Comment
-commentLine = do c <- stringWSpaces
-                 return (c,[])
+  keyValue '=' (stringNot "=\n\t") (option [] stringWSpaces)
 
 listPair :: Char -> Parser a -> Parser b -> Parser [(a, b)]
 listPair sep p q = do
@@ -146,7 +150,7 @@ stringWOSpaces = do stringNot " \t\n"
 -- parser combinators
 keyValue :: Char -> Parser a -> Parser b -> Parser (a, b)
 keyValue sep p q = do key   <- p
-                      char sep
+                      optional $ char sep
                       value <- q
                       return (key, value)
 

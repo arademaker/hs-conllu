@@ -13,21 +13,21 @@ import System.IO hiding (readFile)
 
 import Text.Parsec.String
 
-readFile :: FilePath -> IO [Sentence]
+readFile :: FilePath -> IO Document
 readFile f = do r <- parseFromFile document f
                 case r of -- how to handle exceptions properly?
-                  Left err  -> do {print err ; return []}
-                  Right ss  -> return ss
+                  Left err  -> do {print err ; return $ Document f []}
+                  Right ss  -> return $ Document (takeFileName f) ss
 
-readDirectory :: FilePath -> IO [Sentence]
+readDirectory :: FilePath -> IO [Document]
 readDirectory d = do fs' <- listDirectory d
                      let fs = map (d </>) fs'
                      ss <- mapM readFile fs
-                     return $ concat ss
+                     return ss
 
-readConllu :: FilePath -> IO [Sentence]
+readConllu :: FilePath -> IO [Document]
 readConllu fp = do f <- doesFileExist fp
-                   if' f (readFile fp) $
+                   if' f (mapM readFile [fp]) $
                      do d <- doesDirectoryExist fp
                         if' d (readDirectory fp) (return [])
 

@@ -20,6 +20,11 @@ import Data.Tree
 
 ---
 -- type and data declarations
+data Document = Document
+  { file      :: String
+  , sents     :: [Sentence]
+  } deriving (Eq,Show)
+
 data Sentence = Sentence
   { --lif     :: Int, -- line in file -- how to obtain this? introspect parsec
    meta      :: [Comment]
@@ -49,29 +54,28 @@ data Token
            }
   | EToken { ix       :: Index
            , childIx  :: Index
-           , eForm    :: Maybe Form
-           , eLemma   :: Maybe Lemma
-           , eUpostag :: Maybe PosTag
+           , form     :: Form
+           , lemma    :: Lemma
+           , upostag  :: PosTag
            , xpostag  :: Xpostag
            , feats    :: Feats
            -- heads and deprels specified in deps
            , deps     :: Deps
            , misc     :: Misc
-           -- field with prefix 'e' represents the fact that it is
-           -- different from the one in SToken (can be empty in EToken
-           -- but not in SToken, or vice-versa)
            }
   deriving (Eq, Show)
 
 type Index   = Int
 type IxSep   = Char
-type Form    = String
-type Lemma   = String
+type Form    = Maybe String
+type Lemma   = Maybe String
+type PosTag  = Maybe Pos
 type Xpostag = Maybe String
 type Feats   = [StringPair]
-type Dephead = Index
-type DepRel  = (Dep,String)
-type Deps    = [(Index, DepRel)]
+type Dephead = Maybe Index
+type DepRel  = Maybe (Dep,Subtype)
+type Subtype = String
+type Deps    = [(Index,(Dep,Subtype))]
 type Misc    = Maybe String
 
 data Dep
@@ -114,7 +118,7 @@ data Dep
   | XCOMP
   deriving (Eq, Show)
 
-data PosTag
+data Pos
   = ADJ
   | ADP
   | ADV
@@ -134,6 +138,7 @@ data PosTag
   | X
   deriving (Eq, Show)
 
+-- trees
 type TTree  = Tree Token -- only STokens
 
 root :: TTree
@@ -184,64 +189,62 @@ mkDep = mkDep' . upcaseString
     mkDep' "VOCATIVE"   = VOCATIVE
     mkDep' "XCOMP"      = XCOMP
 
-mkPosTag :: String -> PosTag
-mkPosTag = mkPosTag' . upcaseString
+mkPos :: String -> Pos
+mkPos = mkPos' . upcaseString
   where
-    mkPosTag' "ADJ"      = ADJ
-    mkPosTag' "ADP"      = ADP
-    mkPosTag' "ADV"      = ADV
-    mkPosTag' "AUX"      = AUXpos
-    mkPosTag' "CCONJ"    = CCONJ
-    mkPosTag' "DET"      = DETpos
-    mkPosTag' "INTJ"     = INTJ
-    mkPosTag' "NOUN"     = NOUN
-    mkPosTag' "NUM"      = NUM
-    mkPosTag' "PART"     = PART
-    mkPosTag' "PRON"     = PRON
-    mkPosTag' "PROPN"    = PROPN
-    mkPosTag' "PUNCT"    = PUNCTpos
-    mkPosTag' "SCONJ"    = SCONJ
-    mkPosTag' "SYM"      = SYM
-    mkPosTag' "VERB"     = VERB
-    mkPosTag' "X"        = X
+    mkPos' "ADJ"      = ADJ
+    mkPos' "ADP"      = ADP
+    mkPos' "ADV"      = ADV
+    mkPos' "AUX"      = AUXpos
+    mkPos' "CCONJ"    = CCONJ
+    mkPos' "DET"      = DETpos
+    mkPos' "INTJ"     = INTJ
+    mkPos' "NOUN"     = NOUN
+    mkPos' "NUM"      = NUM
+    mkPos' "PART"     = PART
+    mkPos' "PRON"     = PRON
+    mkPos' "PROPN"    = PROPN
+    mkPos' "PUNCT"    = PUNCTpos
+    mkPos' "SCONJ"    = SCONJ
+    mkPos' "SYM"      = SYM
+    mkPos' "VERB"     = VERB
+    mkPos' "X"        = X
 
-mkToken :: Index -> Maybe IxSep -> Maybe Index -> Maybe Form
-  -> Maybe Lemma -> Maybe PosTag -> Xpostag -> Feats -> Maybe Dephead
-  -> Maybe DepRel -> Deps -> Misc -> Token
-mkToken ix sep = case sep of
-  Nothing  -> mkSToken ix
-  Just '-' -> mkMToken ix
-  Just '.' -> mkEToken ix
+-- tokens
+mkToken :: Index -> Maybe IxSep -> Maybe Index -> Form -> Lemma
+  ->  PosTag -> Xpostag -> Feats -> Dephead -> DepRel -> Deps
+  -> Misc -> Token
+mkToken i sep ci = case sep of
+  Nothing  -> mkSToken i
+  Just '-' -> mkMToken i (fromJust ci)
+  Just '.' -> mkEToken i (fromJust ci)
 
-mkSToken :: Index -> Maybe Index -> Maybe Form -> Maybe Lemma
-  -> Maybe PosTag -> Xpostag -> Feats -> Maybe Dephead -> Maybe DepRel
-  -> Deps -> Misc -> Token
-mkSToken i ci fo l up xp fe h dr d m =
+mkSToken :: Index -> Form -> Lemma -> PosTag -> Xpostag
+  -> Feats -> Dephead -> DepRel -> Deps -> Misc -> Token
+mkSToken i fo l up xp fe h dr d m =
   SToken { ix      = i
-         , form    = fromJust fo
-         , lemma   = fromJust l
-         , upostag = fromJust up
+         , form    = fo
+         , lemma   = l
+         , upostag = up
          , xpostag = xp
          , feats   = fe
-         , dephead = fromJust h
-         , deprel  = fromJust dr
+         , dephead = h
+         , deprel  = dr
          , deps    = d
          , misc    = m
          }
 
-mkMToken :: Index -> Maybe Index -> Maybe Form -> Maybe Lemma
-  -> Maybe PosTag -> Xpostag -> Feats -> Maybe Dephead -> Maybe DepRel
-  -> Deps -> Misc -> Token
+mkMToken :: Index ->  Index -> Form -> Lemma -> PosTag -> Xpostag
+  -> Feats -> Dephead -> DepRel -> Deps -> Misc -> Token
 mkMToken s e fo l up xp fe h dr d m =
-  MToken {start = s, end = fromJust e, form = fromJust fo, misc = m}
+  MToken {start = s, end = e, form = fo, misc = m}
 
-mkEToken :: Index -> Maybe Index -> Maybe Form -> Maybe Lemma
-  -> Maybe PosTag -> Xpostag -> Feats -> Maybe Dephead -> Maybe DepRel
-  -> Deps -> Misc -> Token
+mkEToken :: Index ->  Index -> Form -> Lemma -> PosTag -> Xpostag
+  -> Feats -> Dephead -> DepRel -> Deps -> Misc -> Token
 mkEToken i ci fo l up xp fe h dr d m =
   EToken
   { ix       = i
-  , childIx  = fromJust ci
+  , childIx  = ci
   , eForm    = fo
   , eLemma   = l
   , eUpostag = up
@@ -251,6 +254,7 @@ mkEToken i ci fo l up xp fe h dr d m =
   , misc     = m
   }
 
+-- trees
 toETree :: Sentence -> ETree
 toETree s =
   let (sts, mts) = partition isSToken $ tokens s
@@ -264,7 +268,7 @@ tokensToTTree :: [Token] -> TTree
 tokensToTTree ts = foldl' addToken root ts
 
 addToken :: TTree -> Token -> TTree
-addToken (Node p cs) t@(SToken{dephead = dh}) =
+addToken (Node p cs) t@(SToken{dephead = (Just dh)}) =
   if dh == ix p
     then Node p $ (Node t []):cs
     else Node p $ fmap (\c -> addToken c t) cs
@@ -272,7 +276,7 @@ addToken (Node p cs) t@(SToken{dephead = dh}) =
 sortByDepRel :: [Token] -> [Token]
 sortByDepRel = sortBy sortByDepRel'
   where
-    sortByDepRel' SToken{dephead=i1} SToken{dephead=i2} = compare i1 i2
+    sortByDepRel' SToken{dephead=(Just i1)} SToken{dephead=(Just i2)} = compare i1 i2
     sortByDepRel' _ _ = EQ
 
 fromETree :: ETree -> [Token]
@@ -284,7 +288,7 @@ fromETree et =
 drawTTree :: TTree -> String
 drawTTree tt = drawTree $ fmap showSToken tt
   where showSToken t = case t of
-          (SToken{ix=ix,form=fo}) -> (show ix :: String) ++ "_" ++ fo
+          (SToken{ix=ix,form=(Just fo)}) -> (show ix :: String) ++ "_" ++ fo
           EToken{} -> "ROOT"
 
 ---
