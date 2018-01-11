@@ -10,7 +10,6 @@ module UD where
 
 ---
 -- imports
-
 -- stdlib
 import Data.Char
 import Data.Maybe
@@ -78,6 +77,9 @@ type Subtype = String
 type Deps    = [(Index,(Dep,Subtype))]
 type Misc    = Maybe String
 
+dep :: Token -> Dep
+dep t = let (Just (dr,_)) = deprel t in dr
+
 data Dep
   = ACL
   | ADVCL
@@ -140,9 +142,7 @@ data Pos
 
 -- trees
 type TTree  = Tree Token -- only STokens
-
-root :: TTree
-root = Node (EToken 0 0 Nothing Nothing Nothing Nothing [] [] Nothing) []
+-- data Tree a = Node a [Tree a]
 
 type ETree = (TTree, [Token]) -- enhanced tree
 
@@ -245,9 +245,9 @@ mkEToken i ci fo l up xp fe h dr d m =
   EToken
   { ix       = i
   , childIx  = ci
-  , eForm    = fo
-  , eLemma   = l
-  , eUpostag = up
+  , form    = fo
+  , lemma   = l
+  , upostag = up
   , xpostag  = xp
   , feats    = fe
   , deps     = d
@@ -265,7 +265,7 @@ isSToken SToken{} = True
 isSToken _        = False
 
 tokensToTTree :: [Token] -> TTree
-tokensToTTree ts = foldl' addToken root ts
+tokensToTTree (t:tt) = foldl' addToken (Node t []) tt
 
 addToken :: TTree -> Token -> TTree
 addToken (Node p cs) t@(SToken{dephead = (Just dh)}) =
