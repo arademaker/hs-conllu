@@ -11,13 +11,14 @@ module UD where
 ---
 -- imports
 
-import Control.Exception.Base
-import Data.Char
-import Data.Function
-import Data.List
-import Data.Maybe
-import Data.Ord
-import Data.Tree
+import           Control.Exception.Base
+import           Data.Char
+import           Data.Function
+import           Data.List
+import qualified Data.Map.Strict as M
+import           Data.Maybe
+import           Data.Ord
+import           Data.Tree
 
 ---
 -- type and data declarations
@@ -258,10 +259,13 @@ mkEToken i ci fo l up xp fe h dr d m =
   }
 
 -- trees
+isRoot :: Token -> Bool
+isRoot t = ROOT == _dep t
+
 toETree :: Sentence -> ETree
 toETree s =
   let (sts, mts) = sentTksByType s
-  in (tokensToTTree sts, mts)
+  in (stksToTTree sts, mts)
 
 sentSTks :: Sentence -> [Token]
 sentSTks = fst . sentTksByType
@@ -274,19 +278,27 @@ isSToken :: Token -> Bool
 isSToken SToken{} = True
 isSToken _        = False
 
-tokensToTTree :: [Token] -> TTree
-tokensToTTree = sortedTksToTTree . sortByHead
+stksToTTree :: [Token] -> TTree
+stksToTTree ts =
+  let (Just rt) = find isRoot ts
+      dm = tksDepMap ts
+  in rootToTTree rt dm
   where
-    sortedTksToTTree (t:tt) = foldl' addToken (Node t []) tt
+    rootToTTree :: Token -> M.Map Index [Token] -> TTree
+    rootToTTree t m =
+      Node t $
+      map (`rootToTTree` m) $ fromMaybe [] $ M.lookup (_ix t) m
 
-addToken :: TTree -> Token -> TTree
-addToken (Node p cs) tk@SToken {_dephead = (Just dh)} =
-  if dh == _ix p
-    then Node p $ Node tk [] : cs
-    else Node p $ fmap (`addToken` tk) cs
-
-sortByHead :: [Token] -> [Token]
-sortByHead = sortBy (compare `on` _dephead)
+tksDepMap :: [Token] -> M.Map Index [Token]
+-- Map parent_ix [children_tks]
+tksDepMap = foldr mkDepMap M.empty
+  where
+    mkDepMap t m =
+      let hi = fromJust $ _dephead t
+          cs = M.lookup hi m
+      in if isJust cs
+           then M.insertWith (++) hi [t] m
+           else M.insert hi [t] m
 
 fromETree :: ETree -> [Token]
 --[] sorted list not implemented (use insertBy for meta tokens)
@@ -296,8 +308,9 @@ fromETree et =
 
 drawTTree :: TTree -> String
 drawTTree tt = drawTree $ fmap showSToken tt
-  where showSToken SToken{_ix=ix,_form=(Just fo)} = (show ix :: String) ++ "_" ++ fo
-
+  where
+    showSToken SToken {_ix = ix, _form = (Just fo)} =
+      (show ix :: String) ++ "_" ++ fo
 
 ---
 -- validation

@@ -33,7 +33,7 @@ getDepTks d = filter (\t -> d == _dep t)
 getRel' :: (Token -> Bool) -> [Token] -> [(TTree,TTree)]
 getRel' p ts =
   let dts  = filter p ts
-      tr   = tokensToTTree ts
+      tr   = stksToTTree ts
       htrs = map (\t -> getIxSubTree (fromJust $ _dephead t) tr) dts
       dtrs = map (\t -> getIxSubTree (_ix t) tr) dts
   in zip dtrs htrs
