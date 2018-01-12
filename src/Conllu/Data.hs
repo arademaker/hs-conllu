@@ -1,9 +1,9 @@
-module NLP where
+module Data where
 
 ---
 -- imports
 -- library
-import UD
+import Type
 --stdlib
 import Data.Function
 import Data.List

@@ -1,9 +1,9 @@
-module ConlluReader where
+module IO where
 
 ---
 -- imports
-import UD
-import ConlluParser (document)
+import Type
+import Parse (document)
 
 import Prelude hiding (readFile)
 import System.Directory

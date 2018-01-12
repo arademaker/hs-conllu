@@ -1,4 +1,4 @@
-module ConlluParser where
+module Parse where
 
 {--
 
@@ -24,7 +24,7 @@ module ConlluParser where
 -- imports
 
 -- lib imports
-import UD
+import Type
 
 -- stdlib
 import Control.Monad
