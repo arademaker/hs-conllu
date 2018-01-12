@@ -14,25 +14,36 @@ import Data.Tree
 getRel :: Dep -> TTree -> [(TTree,TTree)]
 getRel dr tt =
   let apts = getDepSubTrees dr tt
-      hts = map getHeadSubTree apts
+      hts  = map getHeadSubTree apts
   in zip apts hts
   where
     getHeadSubTree t =
-      let i = fromJust $ dephead . rootLabel $ t
+      let i = fromJust $ _dephead . rootLabel $ t
       in getIxSubTree i tt
 
 getIxSubTree :: Index -> TTree -> TTree
-getIxSubTree i tt = head $ getSubTreesBy (\t -> i == ix t) tt
+getIxSubTree i tt = head $ getSubTreesBy (\t -> i == _ix t) tt
 
 getDepSubTrees :: Dep -> TTree -> [TTree]
-getDepSubTrees dr = getSubTreesBy (\t -> dr == dep t)
+getDepSubTrees d = getSubTreesBy (\t -> d == _dep t)
+
+getDepTks :: Dep -> [Token] -> [Token]
+getDepTks d = filter (\t -> d == _dep t)
+
+getRel' :: (Token -> Bool) -> [Token] -> [(TTree,TTree)]
+getRel' p ts =
+  let dts  = filter p ts
+      tr   = tokensToTTree ts
+      htrs = map (\t -> getIxSubTree (fromJust $ _dephead t) tr) dts
+      dtrs = map (\t -> getIxSubTree (_ix t) tr) dts
+  in zip dtrs htrs
 
 linTTree :: TTree -> [Token]
-linTTree = lin (compare `on` ix)
+linTTree = lin (compare `on` _ix)
 
 ttreeToStr :: TTree -> String
 ttreeToStr t =
-  unwords $ map (fromMaybe "" . form) $ linTTree t
+  unwords $ map (fromMaybe "" . _form) $ linTTree t
 
 ---
 -- generalized functions
