@@ -22,8 +22,7 @@ readFile f = do r <- parseFromFile document f
 readDirectory :: FilePath -> IO [Document]
 readDirectory d = do fs' <- listDirectory d
                      let fs = map (d </>) fs'
-                     ss <- mapM readFile fs
-                     return ss
+                     mapM readFile fs
 
 readConllu :: FilePath -> IO [Document]
 readConllu fp = do f <- doesFileExist fp

@@ -10,11 +10,11 @@ module UD where
 
 ---
 -- imports
--- stdlib
+import Control.Exception.Base
 import Data.Char
+import Data.List
 import Data.Maybe
 import Data.Ord
-import Data.List
 import Data.Tree
 
 ---
@@ -25,9 +25,8 @@ data Document = Document
   } deriving (Eq,Show)
 
 data Sentence = Sentence
-  { --lif     :: Int, -- line in file -- how to obtain this? introspect parsec
-   meta      :: [Comment]
-  , tokens    :: [Token]
+  { meta :: [Comment]
+  , tokens :: [Token]
   } deriving (Eq, Show)
 
 type Comment    = StringPair
@@ -45,7 +44,7 @@ data Token
            , deps    :: Deps
            , misc    :: Misc
            }
-  | MToken { start :: Index
+  | MToken { ix    :: Index
            , end   :: Index
            , form  :: Form
            , misc  :: Misc
@@ -237,21 +236,23 @@ mkSToken i fo l up xp fe h dr d m =
 mkMToken :: Index ->  Index -> Form -> Lemma -> PosTag -> Xpostag
   -> Feats -> Dephead -> DepRel -> Deps -> Misc -> Token
 mkMToken s e fo l up xp fe h dr d m =
-  MToken {start = s, end = e, form = fo, misc = m}
+  assert
+    (mTokenOK fo l up xp fe h dr d)
+    MToken {ix = s, end = e, form = fo, misc = m}
 
 mkEToken :: Index ->  Index -> Form -> Lemma -> PosTag -> Xpostag
   -> Feats -> Dephead -> DepRel -> Deps -> Misc -> Token
 mkEToken i ci fo l up xp fe h dr d m =
   EToken
-  { ix       = i
-  , childIx  = ci
+  { ix      = i
+  , childIx = ci
   , form    = fo
   , lemma   = l
   , upostag = up
-  , xpostag  = xp
-  , feats    = fe
-  , deps     = d
-  , misc     = m
+  , xpostag = xp
+  , feats   = fe
+  , deps    = d
+  , misc    = m
   }
 
 -- trees
@@ -268,10 +269,10 @@ tokensToTTree :: [Token] -> TTree
 tokensToTTree (t:tt) = foldl' addToken (Node t []) tt
 
 addToken :: TTree -> Token -> TTree
-addToken (Node p cs) t@(SToken{dephead = (Just dh)}) =
+addToken (Node p cs) tk@SToken {dephead = (Just dh)} =
   if dh == ix p
-    then Node p $ (Node t []):cs
-    else Node p $ fmap (\c -> addToken c t) cs
+    then Node p $ Node tk [] : cs
+    else Node p $ fmap (`addToken` tk) cs
 
 sortByDepRel :: [Token] -> [Token]
 sortByDepRel = sortBy sortByDepRel'
@@ -287,11 +288,32 @@ fromETree et =
 
 drawTTree :: TTree -> String
 drawTTree tt = drawTree $ fmap showSToken tt
-  where showSToken t = case t of
-          (SToken{ix=ix,form=(Just fo)}) -> (show ix :: String) ++ "_" ++ fo
-          EToken{} -> "ROOT"
+  where showSToken SToken{ix=ix,form=(Just fo)} = (show ix :: String) ++ "_" ++ fo
+
+
+---
+-- validation
+mTokenOK :: Form -> Lemma -> PosTag -> Xpostag -> Feats -> Dephead
+  -> DepRel -> Deps -> Bool
+mTokenOK fo l up xp fe h dr d =
+  assSomething fo $
+  assNothing l $
+  assNothing up $
+  assNothing xp $
+  assNull fe $ assNothing h $ assNothing dr $ assNull d True
+
+eTokenOK h dr d = assNothing h $ assNothing dr $ assSomething d True
 
 ---
 -- utility functions
 upcaseString :: String -> String
 upcaseString = map toUpper
+
+assNothing :: Maybe a -> Bool -> Bool
+assNothing m = assert (isNothing m)
+
+assSomething :: Maybe a -> Bool -> Bool
+assSomething m = assert (isJust m)
+
+assNull :: [a] -> Bool -> Bool
+assNull l = assert (null l)
