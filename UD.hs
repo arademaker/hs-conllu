@@ -10,8 +10,10 @@ module UD where
 
 ---
 -- imports
+
 import Control.Exception.Base
 import Data.Char
+import Data.Function
 import Data.List
 import Data.Maybe
 import Data.Ord
@@ -20,46 +22,46 @@ import Data.Tree
 ---
 -- type and data declarations
 data Document = Document
-  { file      :: String
-  , sents     :: [Sentence]
+  { _file      :: String
+  , _sents     :: [Sentence]
   } deriving (Eq,Show)
 
 data Sentence = Sentence
-  { meta :: [Comment]
-  , tokens :: [Token]
+  { _meta :: [Comment]
+  , _tokens :: [Token]
   } deriving (Eq, Show)
 
 type Comment    = StringPair
 type StringPair = (String, String)
 
 data Token
-  = SToken { ix      :: Index
-           , form    :: Form
-           , lemma   :: Lemma
-           , upostag :: PosTag
-           , xpostag :: Xpostag
-           , feats   :: Feats
-           , dephead :: Dephead
-           , deprel  :: DepRel
-           , deps    :: Deps
-           , misc    :: Misc
+  = SToken { _ix      :: Index
+           , _form    :: Form
+           , _lemma   :: Lemma
+           , _upostag :: PosTag
+           , _xpostag :: Xpostag
+           , _feats   :: Feats
+           , _dephead :: Dephead
+           , _deprel  :: DepRel
+           , _deps    :: Deps
+           , _misc    :: Misc
            }
-  | MToken { ix    :: Index
-           , end   :: Index
-           , form  :: Form
-           , misc  :: Misc
+  | MToken { _ix    :: Index
+           , _end   :: Index
+           , _form  :: Form
+           , _misc  :: Misc
            -- other values should be empty
            }
-  | EToken { ix       :: Index
-           , childIx  :: Index
-           , form     :: Form
-           , lemma    :: Lemma
-           , upostag  :: PosTag
-           , xpostag  :: Xpostag
-           , feats    :: Feats
+  | EToken { _ix       :: Index
+           , _childIx  :: Index
+           , _form     :: Form
+           , _lemma    :: Lemma
+           , _upostag  :: PosTag
+           , _xpostag  :: Xpostag
+           , _feats    :: Feats
            -- heads and deprels specified in deps
-           , deps     :: Deps
-           , misc     :: Misc
+           , _deps     :: Deps
+           , _misc     :: Misc
            }
   deriving (Eq, Show)
 
@@ -76,8 +78,8 @@ type Subtype = String
 type Deps    = [(Index,(Dep,Subtype))]
 type Misc    = Maybe String
 
-dep :: Token -> Dep
-dep t = let (Just (dr,_)) = deprel t in dr
+_dep :: Token -> Dep
+_dep t = let (Just (dr,_)) = _deprel t in dr
 
 data Dep
   = ACL
@@ -221,16 +223,16 @@ mkToken i sep ci = case sep of
 mkSToken :: Index -> Form -> Lemma -> PosTag -> Xpostag
   -> Feats -> Dephead -> DepRel -> Deps -> Misc -> Token
 mkSToken i fo l up xp fe h dr d m =
-  SToken { ix      = i
-         , form    = fo
-         , lemma   = l
-         , upostag = up
-         , xpostag = xp
-         , feats   = fe
-         , dephead = h
-         , deprel  = dr
-         , deps    = d
-         , misc    = m
+  SToken { _ix      = i
+         , _form    = fo
+         , _lemma   = l
+         , _upostag = up
+         , _xpostag = xp
+         , _feats   = fe
+         , _dephead = h
+         , _deprel  = dr
+         , _deps    = d
+         , _misc    = m
          }
 
 mkMToken :: Index ->  Index -> Form -> Lemma -> PosTag -> Xpostag
@@ -238,47 +240,53 @@ mkMToken :: Index ->  Index -> Form -> Lemma -> PosTag -> Xpostag
 mkMToken s e fo l up xp fe h dr d m =
   assert
     (mTokenOK fo l up xp fe h dr d)
-    MToken {ix = s, end = e, form = fo, misc = m}
+    MToken {_ix = s, _end = e, _form = fo, _misc = m}
 
 mkEToken :: Index ->  Index -> Form -> Lemma -> PosTag -> Xpostag
   -> Feats -> Dephead -> DepRel -> Deps -> Misc -> Token
 mkEToken i ci fo l up xp fe h dr d m =
   EToken
-  { ix      = i
-  , childIx = ci
-  , form    = fo
-  , lemma   = l
-  , upostag = up
-  , xpostag = xp
-  , feats   = fe
-  , deps    = d
-  , misc    = m
+  { _ix      = i
+  , _childIx = ci
+  , _form    = fo
+  , _lemma   = l
+  , _upostag = up
+  , _xpostag = xp
+  , _feats   = fe
+  , _deps    = d
+  , _misc    = m
   }
 
 -- trees
 toETree :: Sentence -> ETree
 toETree s =
-  let (sts, mts) = partition isSToken $ tokens s
-  in (tokensToTTree $ sortByDepRel sts, mts)
+  let (sts, mts) = sentTksByType s
+  in (tokensToTTree sts, mts)
+
+sentSTks :: Sentence -> [Token]
+sentSTks = fst . sentTksByType
+
+sentTksByType :: Sentence -> ([Token],[Token])
+-- ([SToken],[metaTokens:EToken,MToken])
+sentTksByType Sentence{_tokens=ts} = partition isSToken ts
 
 isSToken :: Token -> Bool
 isSToken SToken{} = True
 isSToken _        = False
 
 tokensToTTree :: [Token] -> TTree
-tokensToTTree (t:tt) = foldl' addToken (Node t []) tt
+tokensToTTree = sortedTksToTTree . sortByHead
+  where
+    sortedTksToTTree (t:tt) = foldl' addToken (Node t []) tt
 
 addToken :: TTree -> Token -> TTree
-addToken (Node p cs) tk@SToken {dephead = (Just dh)} =
-  if dh == ix p
+addToken (Node p cs) tk@SToken {_dephead = (Just dh)} =
+  if dh == _ix p
     then Node p $ Node tk [] : cs
     else Node p $ fmap (`addToken` tk) cs
 
-sortByDepRel :: [Token] -> [Token]
-sortByDepRel = sortBy sortByDepRel'
-  where
-    sortByDepRel' SToken{dephead=(Just i1)} SToken{dephead=(Just i2)} = compare i1 i2
-    sortByDepRel' _ _ = EQ
+sortByHead :: [Token] -> [Token]
+sortByHead = sortBy (compare `on` _dephead)
 
 fromETree :: ETree -> [Token]
 --[] sorted list not implemented (use insertBy for meta tokens)
@@ -288,7 +296,7 @@ fromETree et =
 
 drawTTree :: TTree -> String
 drawTTree tt = drawTree $ fmap showSToken tt
-  where showSToken SToken{ix=ix,form=(Just fo)} = (show ix :: String) ++ "_" ++ fo
+  where showSToken SToken{_ix=ix,_form=(Just fo)} = (show ix :: String) ++ "_" ++ fo
 
 
 ---

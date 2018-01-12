@@ -62,15 +62,15 @@ token :: Parser Token
 token = mkToken <$> index
              <*> optionMaybe indexSep
              <*> optionMaybe index <* tab
-             <*> formP <* tab
-             <*> lemmaP <* tab
-             <*> upostagP <* tab
-             <*> xpostagP <* tab
-             <*> featsP <* tab
-             <*> depheadP <* tab
-             <*> deprelP <* tab
-             <*> depsP <* tab
-             <*> miscP <* newline
+             <*> form <* tab
+             <*> lemma <* tab
+             <*> upostag <* tab
+             <*> xpostag <* tab
+             <*> feats <* tab
+             <*> dephead <* tab
+             <*> deprel <* tab
+             <*> deps <* tab
+             <*> misc <* newline
 
 emptyField :: Parser (Maybe a)
 emptyField = do char '_'
@@ -83,43 +83,43 @@ index = do ix <- many1 digit
 indexSep :: Parser IxSep
 indexSep = choice [char '-', char '.']
 
-formP :: Parser Form
-formP = maybeEmpty stringWSpaces
+form :: Parser Form
+form = maybeEmpty stringWSpaces
 
-lemmaP :: Parser Lemma
-lemmaP = maybeEmpty stringWSpaces
+lemma :: Parser Lemma
+lemma = maybeEmpty stringWSpaces
 
-upostagP :: Parser PosTag
-upostagP = maybeEmpty upostagP'
+upostag :: Parser PosTag
+upostag = maybeEmpty upostag'
   where
-    upostagP' :: Parser Pos
-    upostagP' = liftM mkPos stringWOSpaces
+    upostag' :: Parser Pos
+    upostag' = liftM mkPos stringWOSpaces
 
-xpostagP :: Parser Xpostag
-xpostagP = maybeEmpty stringWOSpaces
+xpostag :: Parser Xpostag
+xpostag = maybeEmpty stringWOSpaces
 
-featsP :: Parser Feats
-featsP = listP $ listPair '=' (stringNot "=") (stringNot "\t|")
+feats :: Parser Feats
+feats = listP $ listPair '=' (stringNot "=") (stringNot "\t|")
 
-depheadP :: Parser Dephead
-depheadP = maybeEmpty $ symbol index
+dephead :: Parser Dephead
+dephead = maybeEmpty $ symbol index
 
-deprelP :: Parser DepRel
-deprelP = maybeEmpty deprelP'
+deprel :: Parser DepRel
+deprel = maybeEmpty deprel'
 
-deprelP' :: Parser (Dep, Subtype)
-deprelP' = do dep <- depP
-              st  <- option [] $ char ':' *> many1 letter
-              return (dep,st)
+deprel' :: Parser (Dep, Subtype)
+deprel' = do dep <- dep
+             st  <- option [] $ char ':' *> many1 letter
+             return (dep,st)
   where
-    depP :: Parser Dep
-    depP = liftM mkDep $ many1 letter
+    dep :: Parser Dep
+    dep = liftM mkDep $ many1 letter
 
-depsP :: Parser Deps
-depsP = listP $ listPair ':' index deprelP'
+deps :: Parser Deps
+deps = listP $ listPair ':' index deprel'
 
-miscP :: Parser Misc
-miscP = maybeEmpty stringWSpaces
+misc :: Parser Misc
+misc = maybeEmpty stringWSpaces
 
 ---
 -- utility parsers
