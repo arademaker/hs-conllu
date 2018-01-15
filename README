@@ -1,0 +1,15 @@
+#+TITLE: hs-conllu
+
+  this package provides a parser of the [[http://universaldependencies.org/format.html][CoNLL-U format]], along with a
+  data model for its constituents.
+
+  further processing utilities are being developed, and currently
+  include tree building and processing functions, relation extraction,
+  and tree linearization.
+
+** Installation
+   - using =cabal=:
+     #+BEGIN_SRC term
+     git clone $REPO_URL
+     cabal install
+     #+END_SRC

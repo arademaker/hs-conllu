@@ -1,9 +1,9 @@
-module IO where
+module Conllu.IO where
 
 ---
 -- imports
-import Type
-import Parse (document)
+import Conllu.Type
+import Conllu.Parse (document)
 
 import Prelude hiding (readFile)
 import System.Directory

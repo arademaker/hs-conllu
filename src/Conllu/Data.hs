@@ -1,9 +1,9 @@
-module Data where
+module Conllu.Data where
 
 ---
 -- imports
 -- library
-import Type
+import Conllu.Type
 --stdlib
 import Data.Function
 import Data.List

@@ -1,4 +1,4 @@
-module Type where
+module Conllu.Type where
 
 {--
 
