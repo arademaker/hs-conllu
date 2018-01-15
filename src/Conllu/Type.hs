@@ -265,7 +265,7 @@ isRoot t = ROOT == _dep t
 toETree :: Sentence -> ETree
 toETree s =
   let (sts, mts) = sentTksByType s
-  in (stksToTTree sts, mts)
+  in (sTksToTTree sts, mts)
 
 sentSTks :: Sentence -> [Token]
 sentSTks = fst . sentTksByType
@@ -278,8 +278,8 @@ isSToken :: Token -> Bool
 isSToken SToken{} = True
 isSToken _        = False
 
-stksToTTree :: [Token] -> TTree
-stksToTTree ts =
+sTksToTTree :: [Token] -> TTree
+sTksToTTree ts =
   let (Just rt) = find isRoot ts
       dm = tksDepMap ts
   in rootToTTree rt dm
