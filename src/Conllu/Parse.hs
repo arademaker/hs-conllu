@@ -8,16 +8,6 @@ module Conllu.Parse where
  http://universaldependencies.org/format.html
  http://universaldependencies.org/v2/conll-u.html
 
--- TODO: Convert String -> Text
-
--- TODO: warn of spaces in fields where they are not allowed (FORM and
--- LEMMA). do this in symbol function.
-
--- TODO: check what's the purpose of the '_' in this MISC field:
--- '_|SpaceAfter=Yes' should it be allowed?
-
--- TODO: create non validating parser: count 10 (stringNot "\t\n" <* tab)
-
 --}
 
 ---

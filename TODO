@@ -1,0 +1,16 @@
+- library:
+  - Convert String -> Text
+  
+- Type:
+  - should I remove Maybe's where I can ([] as Nothing)?
+  - should have one data declaration for each kin of token?
+
+- Parse:
+  - warn of spaces in fields where they are not allowed (FORM and
+    LEMMA). do this in symbol function.
+  - check what's the purpose of the '_' in this MISC field:
+    '_|SpaceAfter=Yes'. should it be allowed?
+  - create non validating parser: count 10 (stringNot "\t\n" <* tab)
+
+- Data:
+  - add token functions or let user do it?

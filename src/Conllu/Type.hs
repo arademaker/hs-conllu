@@ -1,13 +1,5 @@
 module Conllu.Type where
 
-{--
-
-- TODO: validate input of mk*Token functions https://github.com/tonymorris/validation, https://github.com/mavenraven/validations, https://ro-che.info/articles/2015-05-02-smarter-validation
-
-- should I remove Maybe's where I can ([] as Nothing)?
-
---}
-
 ---
 -- imports
 
@@ -15,7 +7,6 @@ import           Control.Exception.Base
 import           Data.Char
 import           Data.Function
 import           Data.List
-import qualified Data.Map.Strict as M
 import           Data.Maybe
 import           Data.Ord
 import           Data.Tree
@@ -79,8 +70,14 @@ type Subtype = String
 type Deps    = [(Index,(Dep,Subtype))]
 type Misc    = Maybe String
 
-_dep :: Token -> Dep
-_dep t = let (Just (dr,_)) = _deprel t in dr
+_dep :: Token -> Maybe Dep
+_dep = dep . _deprel
+  where
+    dep (Just (dr,_)) = Just dr
+    dep _ = Nothing
+
+depIs :: Dep -> Token -> Bool
+depIs d = maybe False (\d' -> d == d') . _dep
 
 data Dep
   = ACL
@@ -257,60 +254,6 @@ mkEToken i ci fo l up xp fe h dr d m =
   , _deps    = d
   , _misc    = m
   }
-
--- trees
-isRoot :: Token -> Bool
-isRoot t = ROOT == _dep t
-
-toETree :: Sentence -> ETree
-toETree s =
-  let (sts, mts) = sentTksByType s
-  in (sTksToTTree sts, mts)
-
-sentSTks :: Sentence -> [Token]
-sentSTks = fst . sentTksByType
-
-sentTksByType :: Sentence -> ([Token],[Token])
--- ([SToken],[metaTokens:EToken,MToken])
-sentTksByType Sentence{_tokens=ts} = partition isSToken ts
-
-isSToken :: Token -> Bool
-isSToken SToken{} = True
-isSToken _        = False
-
-sTksToTTree :: [Token] -> TTree
-sTksToTTree ts =
-  let (Just rt) = find isRoot ts
-      dm = tksDepMap ts
-  in rootToTTree rt dm
-  where
-    rootToTTree :: Token -> M.Map Index [Token] -> TTree
-    rootToTTree t m =
-      Node t $
-      map (`rootToTTree` m) $ fromMaybe [] $ M.lookup (_ix t) m
-
-tksDepMap :: [Token] -> M.Map Index [Token]
--- Map parent_ix [children_tks]
-tksDepMap = foldr mkDepMap M.empty
-  where
-    mkDepMap t m =
-      let hi = fromJust $ _dephead t
-          cs = M.lookup hi m
-      in if isJust cs
-           then M.insertWith (++) hi [t] m
-           else M.insert hi [t] m
-
-fromETree :: ETree -> [Token]
---[] sorted list not implemented (use insertBy for meta tokens)
-fromETree et =
-  let (tt, mts) = et
-  in mts ++ flatten tt
-
-drawTTree :: TTree -> String
-drawTTree tt = drawTree $ fmap showSToken tt
-  where
-    showSToken SToken {_ix = ix, _form = (Just fo)} =
-      (show ix :: String) ++ "_" ++ fo
 
 ---
 -- validation
