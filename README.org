@@ -7,26 +7,42 @@
   include tree building and processing functions, relation extraction,
   and tree linearization.
 
-** Installation
-   #+BEGIN_SRC term
-   cd /path/of/choice/
-   git clone $REPO_URL
-   #+END_SRC
-   - using =cabal=:
-     #+BEGIN_SRC term
-     cabal install
-     #+END_SRC
-   - using =stack=:
-     #+BEGIN_SRC term
-     stack setup
-     stack build
-     #+END_SRC
+* Installation
+  #+BEGIN_SRC sh
+  cd /path/of/choice/
+  git clone $REPO_URL
+  #+END_SRC
+  - using =cabal=:
+    #+BEGIN_SRC sh
+    cabal install
+    #+END_SRC
+  - using =stack=:
+    #+BEGIN_SRC sh
+    stack setup
+    stack build
+    stack install --system-ghc
+    #+END_SRC
 
-   if you have problems with the dependency versions, you may try to
-   alter them in the cabal file for the version you have. the version
-   bounds were generated automatically by cabal, and are probably
-   conservative -- the library probably will probably still work if
-   you have the same major version. (if it does, make a PR!)
+  if you have problems with the dependency versions, you may try to
+  alter them in the cabal file for the version you have. the version
+  bounds were generated automatically by cabal, and are probably
+  conservative -- the library probably will probably still work if you
+  have the same major version. (if it does, make a PR!)
 
-   if you don't want to have this kind of problem anymore, try [[https://docs.haskellstack.org/en/stable/README/][stack]]
-   (see why [[https://www.fpcomplete.com/blog/2015/06/why-is-stack-not-cabal][here]]).
+  if you don't want to have this kind of problem anymore, try [[https://docs.haskellstack.org/en/stable/README/][stack]]
+  (see why [[https://www.fpcomplete.com/blog/2015/06/why-is-stack-not-cabal][here]]).
+
+** Usage
+   currently there is not much functionality besides the parser and a
+   few utility functions.
+
+*** Reading CoNLL-U files
+    the reading functions are in =Conllu.Reader=. if your conllu files
+    are not syntactically correct or I got the parser wrong, you may
+    have to take a look at =Conllu.Parser=. I'll soon provide a
+    customizable parser.
+    #+BEGIN_SRC sh
+    runghc Reader.hs $CONLLU_PATH
+    #+END_SRC
+    will read the file at $CONLLU_PATH, or all the =*.conllu= files in
+    that path, and output their haskell representation to sdout.

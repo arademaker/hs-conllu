@@ -1,7 +1,8 @@
 - library:
   - Convert String -> Text
   - use quickcheck for property testing
-  
+    (https://begriffs.com/posts/2017-01-14-design-use-quickcheck.html)
+
 - Type:
   - should I remove Maybe's where I can ([] as Nothing)?
   - should have one data declaration for each kin of token?
