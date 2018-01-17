@@ -32,17 +32,17 @@
   if you don't want to have this kind of problem anymore, try [[https://docs.haskellstack.org/en/stable/README/][stack]]
   (see why [[https://www.fpcomplete.com/blog/2015/06/why-is-stack-not-cabal][here]]).
 
-** Usage
+* Usage
    currently there is not much functionality besides the parser and a
    few utility functions.
 
-*** Reading CoNLL-U files
-    the reading functions are in =Conllu.Reader=. if your conllu files
-    are not syntactically correct or I got the parser wrong, you may
-    have to take a look at =Conllu.Parser=. I'll soon provide a
-    customizable parser.
+** Reading CoNLL-U files
+    the reading functions are in =Conllu.IO=. if your conllu files are
+    not syntactically correct or I got the parser wrong, you may have
+    to take a look at =Conllu.Parse=. I'll soon provide a customizable
+    parser.
     #+BEGIN_SRC sh
-    runghc Reader.hs $CONLLU_PATH
+    runghc IO.hs $CONLLU_PATH
     #+END_SRC
     will read the file at $CONLLU_PATH, or all the =*.conllu= files in
     that path, and output their haskell representation to sdout.
