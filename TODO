@@ -1,5 +1,6 @@
 - library:
   - Convert String -> Text
+  - use quickcheck for property testing
   
 - Type:
   - should I remove Maybe's where I can ([] as Nothing)?

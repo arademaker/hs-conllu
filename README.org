@@ -1,15 +1,32 @@
 #+TITLE: hs-conllu
 
-  this package provides a parser of the [[http://universaldependencies.org/format.html][CoNLL-U format]], along with a
-  data model for its constituents.
+  this package provides a validating parser of the [[http://universaldependencies.org/format.html][CoNLL-U format]],
+  along with a data model for its constituents.
 
   further processing utilities are being developed, and currently
   include tree building and processing functions, relation extraction,
   and tree linearization.
 
 ** Installation
+   #+BEGIN_SRC term
+   cd /path/of/choice/
+   git clone $REPO_URL
+   #+END_SRC
    - using =cabal=:
      #+BEGIN_SRC term
-     git clone $REPO_URL
      cabal install
      #+END_SRC
+   - using =stack=:
+     #+BEGIN_SRC term
+     stack setup
+     stack build
+     #+END_SRC
+
+   if you have problems with the dependency versions, you may try to
+   alter them in the cabal file for the version you have. the version
+   bounds were generated automatically by cabal, and are probably
+   conservative -- the library probably will probably still work if
+   you have the same major version. (if it does, make a PR!)
+
+   if you don't want to have this kind of problem anymore, try [[https://docs.haskellstack.org/en/stable/README/][stack]]
+   (see why [[https://www.fpcomplete.com/blog/2015/06/why-is-stack-not-cabal][here]]).
