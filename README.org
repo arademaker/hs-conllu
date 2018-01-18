@@ -37,12 +37,34 @@
    few utility functions.
 
 ** Reading CoNLL-U files
-    the reading functions are in =Conllu.IO=. if your conllu files are
-    not syntactically correct or I got the parser wrong, you may have
-    to take a look at =Conllu.Parse=. I'll soon provide a customizable
-    parser.
-    #+BEGIN_SRC sh
-    runghc IO.hs $CONLLU_PATH
-    #+END_SRC
-    will read the file at $CONLLU_PATH, or all the =*.conllu= files in
-    that path, and output their haskell representation to sdout.
+   the reading functions are in the reader module.
+   #+BEGIN_SRC sh
+   $ ghci
+   > import Conllu.IO
+   > d <- readConllu "path/to/conllu"
+   #+END_SRC
+   will read the file at the specified path, or all the =*.conllu=
+   files in that path.
+
+   if your conllu files don't stricly follow the specification or I
+   got the parser wrong, you may want to take a look at the parser
+   module.
+
+** Customizable parsers
+   if you just want to tweak how a few fields of the CoNLL-U format
+   are parsed, you may write a parser for that field and then
+   customize your the standard parser with the =parseC= function and
+   the =customC= record (defined in the parse module), using the
+   overriding technique described [[https://web.archive.org/web/*/http://neilmitchell.blogspot.com.br/2008/04/optional-parameters-in-haskell.html][here]]. you then use the =read*With=
+   functions in the reader module, providing your customized parser.
+
+   I didn't make the parser as customizable as it could be, so if that
+   bothers you create and issue or file a PR, please!
+
+* Contributing
+  I'm a new haskeller, so any help will probably be useful -- even if
+  its just a few pointers and comments on how I can improve the
+  library or my code.
+
+  if you want to contribute code, let me know, and go right on. you
+  may want to look at the =TODO.org= file.

@@ -13,10 +13,8 @@ module Conllu.Parse where
 ---
 -- imports
 
--- lib imports
 import Conllu.Type
 
--- stdlib
 import Control.Monad
 import Data.Char
 import Data.List
@@ -24,7 +22,6 @@ import Data.Maybe
 import System.Environment
 import System.IO
 
--- hackage
 import Text.Parsec hiding (token)
 import Text.Parsec.Combinator
 import Text.Parsec.String
@@ -33,34 +30,46 @@ import Text.ParserCombinators.Parsec.Char
 ---
 -- conllu parsers
 document :: Parser [Sentence]
-document = endBy1 sentence blankLine <* eof
+document = documentC sentence
+
+documentC :: Parser Sentence -> Parser [Sentence]
+documentC s = endBy1 s blankLine <* eof
 
 blankLine :: Parser ()
 blankLine = litSpaces <* newline -- spaces shouldn't exist, but no
-                                    -- problem being lax here (I think)
+                                 -- problem being lax here (I think)
 
 sentence :: Parser Sentence
-sentence = liftM2 Sentence (many comment) (many1 token)
+sentence = sentenceC comment token
+
+sentenceC :: Parser Comment -> Parser Token -> Parser Sentence
+sentenceC c t = liftM2 Sentence (many c) (many1 t)
 
 comment :: Parser Comment
 comment = do char '#'
              commentPair <* newline
 
 token :: Parser Token
--- check liftM5 and above for no variable parsing, see
--- graham's book
-token = mkToken <$> index
-             <*> optionMaybe indexSep
-             <*> optionMaybe index <* tab
-             <*> form <* tab
-             <*> lemma <* tab
-             <*> upostag <* tab
-             <*> xpostag <* tab
-             <*> feats <* tab
-             <*> dephead <* tab
-             <*> deprel <* tab
-             <*> deps <* tab
-             <*> misc <* newline
+token = tokenC index indexSep form lemma upostag xpostag feats
+  dephead deprel deps misc
+
+tokenC :: Parser Index -> Parser IxSep -> Parser Form -> Parser Lemma
+  -> Parser PosTag -> Parser Xpostag -> Parser Feats
+  -> Parser Dephead -> Parser DepRel -> Parser Deps -> Parser Misc
+  -> Parser Token
+tokenC ix is fo l up xp fe dh dr ds m =
+  mkToken <$> ix
+  <*> optionMaybe is
+  <*> optionMaybe ix <* tab
+  <*> fo <* tab
+  <*> l  <* tab
+  <*> up <* tab
+  <*> xp <* tab
+  <*> fe <* tab
+  <*> dh <* tab
+  <*> dr <* tab
+  <*> ds <* tab
+  <*> m <* newline
 
 emptyField :: Parser (Maybe a)
 emptyField = do char '_'
@@ -153,3 +162,54 @@ listP :: Parser [a] -> Parser [a]
 -- many will return the correct result for the empty filed ('_'), but
 -- will report it the same as any other syntax error
 listP p = liftM (fromMaybe []) $ maybeEmpty p
+
+---
+-- customizable parser
+data ParserC = ParserC
+  { _commentP :: Parser Comment
+  , _indexP   :: Parser Index
+  , _ixsepP   :: Parser IxSep
+  , _formP    :: Parser Form
+  , _lemmaP   :: Parser Lemma
+  , _upostagP :: Parser PosTag
+  , _xpostagP :: Parser Xpostag
+  , _featsP   :: Parser Feats
+  , _depheadP :: Parser Dephead
+  , _deprelP  :: Parser DepRel
+  , _depsP    :: Parser Deps
+  , _miscP    :: Parser Misc
+  } deriving ()
+
+customC :: ParserC
+customC = ParserC
+  { _commentP = comment
+  , _indexP   = index
+  , _ixsepP   = indexSep
+  , _formP    = form
+  , _lemmaP   = lemma
+  , _upostagP = upostag
+  , _xpostagP = xpostag
+  , _featsP   = feats
+  , _depheadP = dephead
+  , _deprelP  = deprel
+  , _depsP    = deps
+  , _miscP    = misc
+  }
+
+parseC :: ParserC -> Parser [Sentence]
+parseC p =
+  let i  = _indexP p
+      is = _ixsepP p
+      fo = _formP p
+      l  = _lemmaP p
+      up = _upostagP p
+      xp = _xpostagP p
+      fs = _featsP p
+      dh = _depheadP p
+      dr = _deprelP p
+      ds = _depsP p
+      m  = _miscP p
+      c  = _commentP p
+      t  = tokenC i is fo l up xp fs dh dr ds m
+      s  = sentenceC c t
+  in documentC s

@@ -3,7 +3,7 @@ module Conllu.IO where
 ---
 -- imports
 import Conllu.Type
-import Conllu.Parse (document)
+import qualified Conllu.Parse as P
 
 import Prelude hiding (readFile)
 import System.Directory
@@ -13,22 +13,37 @@ import System.IO hiding (readFile)
 
 import Text.Parsec.String
 
+---
+-- uses customized parser
+readFileWith :: Parser [Sentence] -> FilePath -> IO Document
+readFileWith p f = do
+  r <- parseFromFile p f
+  case r of
+    Left err -> do print err
+                   return $ Document f []
+    Right ss -> return $ Document (takeFileName f) ss
+
+readDirectoryWith :: Parser [Sentence] -> FilePath -> IO [Document]
+readDirectoryWith p d = do fs' <- listDirectory d
+                           let fs = map (d </>) fs'
+                           mapM (readFileWith p) fs
+
+readConlluWith :: Parser [Sentence] -> FilePath -> IO [Document]
+readConlluWith p fp = do f <- doesFileExist fp
+                         if' f (mapM (readFileWith p) [fp]) $
+                           do d <- doesDirectoryExist fp
+                              if' d (readDirectoryWith p fp) (return [])
+
+---
+-- uses built-in parsers
 readFile :: FilePath -> IO Document
-readFile f = do r <- parseFromFile document f
-                case r of -- how to handle exceptions properly?
-                  Left err  -> do {print err ; return $ Document f []}
-                  Right ss  -> return $ Document (takeFileName f) ss
+readFile = readFileWith P.document
 
 readDirectory :: FilePath -> IO [Document]
-readDirectory d = do fs' <- listDirectory d
-                     let fs = map (d </>) fs'
-                     mapM readFile fs
+readDirectory = readDirectoryWith P.document
 
 readConllu :: FilePath -> IO [Document]
-readConllu fp = do f <- doesFileExist fp
-                   if' f (mapM readFile [fp]) $
-                     do d <- doesDirectoryExist fp
-                        if' d (readDirectory fp) (return [])
+readConllu = readConlluWith P.document
 
 ---
 -- utility functions
