@@ -5,7 +5,9 @@
 
 - Type:
   - should I remove Maybe's where I can ([] as Nothing)?
-  - should have one data declaration for each kin of token?
+  - should have one data declaration for each kind of token? --
+    apparently not
+  - make functions safer on token type
 
 - Parse:
   - warn of spaces in fields where they are not allowed (FORM and

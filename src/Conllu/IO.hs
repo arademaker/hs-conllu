@@ -4,6 +4,7 @@ module Conllu.IO where
 -- imports
 import Conllu.Type
 import Conllu.Parse (document)
+import Conllu.Utils
 
 import Prelude hiding (readFile)
 import System.Directory
@@ -29,12 +30,6 @@ readConllu fp = do f <- doesFileExist fp
                    if' f (mapM readFile [fp]) $
                      do d <- doesDirectoryExist fp
                         if' d (readDirectory fp) (return [])
-
----
--- utility functions
-if' :: Bool -> a -> a -> a
-if' True  x _ = x
-if' False _ y = y
 
 ---
 -- main
