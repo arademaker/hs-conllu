@@ -6,8 +6,6 @@ import Conllu.Type
 import Conllu.Data.Tree
 import Conllu.Utils
 
-import Control.Exception.Base
-import Control.Monad
 import Data.Function
 import Data.List
 import Data.Maybe
@@ -19,51 +17,6 @@ _depU = mkU _dep
 
 _depheadU :: Token -> Index
 _depheadU = mkU _dephead
-
-diffSTkWith ::
-     Token -> Token -> [String] -> [(String, (String, String))]
--- optimize me with assoc functions
-diffSTkWith t1 t2 ls = filter (\(l,_) -> l `elem` ls) ts
-  where
-    ts = diffSTk t1 t2
-
-diffSTk :: Token -> Token -> [(String, (String, String))]
-diffSTk t1 t2 =
-  let (ls, fs) = unzip kfs
-  in zip ls $ mapMaybe (\f -> (compareV `on` f) t1 t2) fs
-  where
-    kfs =
-      [ ("form"    , showM . _form)
-      , ("lemma"   , showM . _lemma)
-      , ("upostag" , showM . _upostag)
-      , ("xpostag" , showM . _xpostag)
-      , ("feats"   , show . _feats)
-      , ("head"    , showM . _dephead)
-      , ("deprel"  , showM . _deprel)
-      , ("deps"    , show . _deps)
-      , ("misc"    , showM . _misc)
-      ]
-
-diffSTks
-  :: [Token]
-  -> [Token]
-  -> [String]
-  -> [(Index, [(String, (String, String))])]
--- should I use monads here?
-diffSTks ts1 ts2 ls =
-  if'
-    (((==) `on` length) ts1 ts2)
-    (concat $ zipWith diffIxSTkWith ts1 ts2)
-    []
-  where
-    diffIxSTkWith t1 t2 =
-      if'
-        (((==) `on` _ix) t1 t2)
-        (let d = diffSTkWith t1 t2 ls
-         in if null d
-              then []
-              else [(_ix t1, d)])
-        []
 
 -- relations
 getRel :: (Token -> Bool) -> [Token] -> [(TTree, TTree)]
@@ -129,13 +82,3 @@ mkU fm = fromJust . fm
 -- auxiliary functions
 mapP :: (a -> b) -> (a, a) -> (b, b)
 mapP f (a, a') = (f a, f a')
-
-compareV :: Eq a => a -> a -> Maybe (a, a)
-compareV x y =
-  if x == y
-    then Nothing
-    else Just (x, y)
-
-showM :: Show a => Maybe a -> String
-showM (Just x) = show x
-showM Nothing  = ""
