@@ -23,26 +23,28 @@ diffField ::
 diffField l f t1 t2 =
   maybe [] (\d -> (l, d) : []) $ (diffV `on` f) t1 t2
 
-diffSTk :: Token -> Token -> [FieldDiff]
-diffSTk t1 t2 =
-  foldMap
-    (\(l, f) -> diffField l f t1 t2)
-    [ ("form", showM . _form)
-    , ("lemma", showM . _lemma)
-    , ("upostag", showM . _upostag)
-    , ("xpostag", showM . _xpostag)
-    , ("feats", show . _feats)
-    , ("head", showM . _dephead)
-    , ("deprel", showM . _deprel)
-    , ("deps", show . _deps)
-    , ("misc", showM . _misc)
-    ]
+diffSTkOn :: [String] -> Token -> Token -> [FieldDiff]
+diffSTkOn ls t1 t2 = foldMap (\(l, f) -> diffField l f t1 t2) lfs
+  where
+    lfs = filter (\(l,_) -> l `elem` ls) dfs
+    dfs =
+      [ ("form", showM . _form)
+      , ("lemma", showM . _lemma)
+      , ("upostag", showM . _upostag)
+      , ("xpostag", showM . _xpostag)
+      , ("feats", show . _feats)
+      , ("head", showM . _dephead)
+      , ("deprel", showM . _deprel)
+      , ("deps", show . _deps)
+      , ("misc", showM . _misc)
+      ]
 
-diffSTks :: [Token] -> [Token] -> [TokenDiff]
-diffSTks sts1 sts2 =
+diffSTks :: [String] ->[Token] -> [Token] -> [TokenDiff]
+diffSTks ls sts1 sts2 =
   if'
     (((==) `on` length) sts1 sts2)
-    (zipWithM (\t1 t2 -> [(_ix t1, diffSTk t1 t2)]) sts1 sts2)
+    (let tis = map _ix sts1
+     in zip tis $ zipWithM (\t1 t2 -> diffSTkOn ls t1 t2) sts1 sts2)
     []
 
 diffSent :: Sentence -> Sentence -> Maybe SentDiff
