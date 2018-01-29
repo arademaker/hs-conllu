@@ -122,7 +122,7 @@ printDocDiff (fs, ss) =
 -- main
 main :: IO ()
 main = do fp1:fp2:ls <- getArgs
-          d1 <- readFile fp1
-          d2 <- readFile fp2
+          d1 <- readConlluFile fp1
+          d2 <- readConlluFile fp2
           putStrLn $ printDocDiff $ diffDocOn ls d1 d2
           return ()
