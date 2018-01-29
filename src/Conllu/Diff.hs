@@ -1,82 +1,87 @@
 module Conllu.Diff where
 
-import Conllu.Type
 import Conllu.Data.Tree
+import Conllu.IO hiding (main)
+import Conllu.Type
 import Conllu.Utils
 
 import Data.Function
 import Data.List
 import Data.Maybe
 import Data.Ord
+import Prelude hiding (readFile)
+import System.Environment
 
 type FieldDiff = (String, (String, String))
 type TokenDiff = (Index, [FieldDiff])
 type SentDiff  = (Index, [TokenDiff])
+type DocDiff   = (String, [SentDiff])
 
-diffSTkOn ::
-     Token -> Token -> [String] -> [FieldDiff]
+diffSTkOn :: [String] -> Token -> Token -> [FieldDiff]
 -- optimize me with assoc functions
-diffSTkOn t1 t2 ls = filter (\(l,_) -> l `elem` ls) ts
+diffSTkOn ls t1 t2 = filter (\(l,_) -> l `elem` ls) ts
   where
     ts = diffSTk t1 t2
 
 diffSTk :: Token -> Token -> [FieldDiff]
 diffSTk t1 t2 =
-  let (ls, fs) = unzip kfs
-  -- check if zip is right
-  in filterMap (isJust . snd) (\d -> (fst d, fromJust $ snd d)) $
-     zip ls $ map (\f -> (compareV `on` f) t1 t2) fs
+  filterMap (isJust . snd) (\d -> (fst d, fromJust $ snd d)) $
+  map (\(l, f) -> (l, (compareV `on` f) t1 t2)) kfs
   where
     kfs =
-      [ ("form"    , showM . _form)
-      , ("lemma"   , showM . _lemma)
-      , ("upostag" , showM . _upostag)
-      , ("xpostag" , showM . _xpostag)
-      , ("feats"   , show . _feats)
-      , ("head"    , showM . _dephead)
-      , ("deprel"  , showM . _deprel)
-      , ("deps"    , show . _deps)
-      , ("misc"    , showM . _misc)
+      [ ("form", showM . _form)
+      , ("lemma", showM . _lemma)
+      , ("upostag", showM . _upostag)
+      , ("xpostag", showM . _xpostag)
+      , ("feats", show . _feats)
+      , ("head", showM . _dephead)
+      , ("deprel", showM . _deprel)
+      , ("deps", show . _deps)
+      , ("misc", showM . _misc)
       ]
 
-diffSTks
-  :: Sentence
+
+diffSentOn'
+  :: [String]
   -> Sentence
-  -> [String]
+  -> Sentence
   -> [TokenDiff]
 -- should I use monads here?
-diffSTks s1 s2 ls =
+diffSentOn' ls s1 s2 =
   let sts1 = sentSTks s1
       sts2 = sentSTks s2
   in if'
        (((==) `on` length) sts1 sts2)
-       (catMaybes $ zipWith (diffAux diffSTkOn ls _ix) sts1 sts2)
+       (catMaybes $ zipWith (diffAux (diffSTkOn ls) _ix) sts1 sts2)
        []
 
-diffAux ::
-     (a -> a -> [String] -> [d])
-  -> [String]
+diffAux
+  :: (a -> a -> [d])
   -> (a -> c)
   -> a
   -> a
   -> Maybe (c, [d])
-diffAux f ls p a1 a2 =
-  let r = f a1 a2 ls
+diffAux f p a1 a2 =
+  let r = f a1 a2
   in if null r
        then Nothing
        else Just (p a1, r)
 
-diffSentOn :: Sentence -> Sentence -> [String] -> Maybe SentDiff
-diffSentOn s1 s2 ls = diffAux diffSTks ls sentId s1 s2
+diffSentOn :: [String] -> Sentence -> Sentence -> Maybe SentDiff
+diffSentOn ls s1 s2 = diffAux (diffSentOn' ls) sentId s1 s2
 
-diffSentsOn :: [Sentence] -> [Sentence] -> [String] -> [SentDiff]
-diffSentsOn [] _ _  = []
-diffSentsOn ss [] _ = []
-diffSentsOn ss1@(s1:st1) ss2@(s2:st2) ls =
+diffSentsOn :: [String] -> [Sentence] -> [Sentence] -> [SentDiff]
+diffSentsOn ls [] _ = []
+diffSentsOn _ ss [] = []
+diffSentsOn ls ss1@(s1:st1) ss2@(s2:st2) =
   case (comparing sentId s1 s2) of
-    LT -> diffSentsOn st1 ss2 ls
-    GT -> diffSentsOn ss1 st2 ls
-    EQ -> (diffSentOn s1 s2 ls) ?: diffSentsOn st1 st2 ls
+    LT -> diffSentsOn ls st1 ss2
+    GT -> diffSentsOn ls ss1 st2
+    EQ -> (diffSentOn ls s1 s2) ?: diffSentsOn ls st1 st2
+
+diffDocOn :: [String] -> Document -> Document -> DocDiff
+diffDocOn ls d1 d2 =
+  (_file d1 ++ "/" ++ _file d2, diffSentsOn ls (_sents d1) (_sents d2))
 
 ---
 -- auxiliary functions
@@ -95,3 +100,29 @@ sentId s =
   let mid = lookup "sent_id " $ _meta s
       id = fromMaybe "0" mid
   in read id :: Index
+
+---
+-- print
+printFieldDiff :: FieldDiff -> String
+printFieldDiff (la, (f, f')) = concat [la, ":", f, "->", f', "\n"]
+
+printTkDiff :: TokenDiff -> String
+printTkDiff (ix, fs) =
+  concat [show $ ix, "\n", concatMap printFieldDiff fs]
+
+printSentDiff :: SentDiff -> String
+printSentDiff (sid, ts) =
+  concat [show $ sid, "-sent--\n", concatMap printTkDiff ts, "\n"]
+
+printDocDiff :: DocDiff -> String
+printDocDiff (fs, ss) =
+  concat [fs, "-doc--\n\n", concatMap printSentDiff ss, "---"]
+
+---
+-- main
+main :: IO ()
+main = do fp1:fp2:ls <- getArgs
+          d1 <- readFile fp1
+          d2 <- readFile fp2
+          putStrLn $ printDocDiff $ diffDocOn ls d1 d2
+          return ()

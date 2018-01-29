@@ -14,8 +14,8 @@ extra-source-files:  ChangeLog.md
 cabal-version:       >=1.10
 
 library
-  exposed-modules:     Conllu.Type, Conllu.Data.Tree, Conllu.Data.Token, Conllu.IO, Conllu.Parse
-  other-modules: Conllu.Utils
+  exposed-modules:     Conllu.Type, Conllu.Data.Tree, Conllu.Data.Token, Conllu.IO, Conllu.Parse, Conllu.Diff, Conllu.Utils
+  --other-modules: Conllu.Utils
   -- other-extensions:
   build-depends:       base >=4.9 && <5, containers >0.5.8 && <0.6, directory >=1.3 && <1.4, filepath >=1.4 && <1.5, parsec >=3.1 && <3.2
   hs-source-dirs:      src
