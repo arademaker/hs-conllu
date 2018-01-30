@@ -13,46 +13,39 @@ import Data.Ord
 import Prelude hiding (readFile)
 import System.Environment
 
-type FieldDiff = (String, (String, String))
-type TokenDiff = (Index, [FieldDiff])
+type TokenDiff = (Token, Token)
 type SentDiff  = (Index, [TokenDiff])
 type DocDiff   = (String, [SentDiff])
 
-diffField ::
-     String -> (Token -> String) -> Token -> Token -> [FieldDiff]
-diffField l f t1 t2 =
-  maybe [] (\d -> (l, d) : []) $ (diffV `on` f) t1 t2
-
-diffSTkOn :: [String] -> Token -> Token -> [FieldDiff]
-diffSTkOn ls t1 t2 = foldMap (\(l, f) -> diffField l f t1 t2) lfs
+diffSTk :: Token -> Token -> Bool
+diffSTk t1 t2 = any (\f -> f t1 == f t2) dfs
   where
-    lfs = filter (\(l,_) -> l `elem` ls) dfs
     dfs =
-      [ ("form", showM . _form)
-      , ("lemma", showM . _lemma)
-      , ("upostag", showM . _upostag)
-      , ("xpostag", showM . _xpostag)
-      , ("feats", show . _feats)
-      , ("head", showM . _dephead)
-      , ("deprel", showM . _deprel)
-      , ("deps", show . _deps)
-      , ("misc", showM . _misc)
+      [ showM . _form
+      , showM . _lemma
+      , showM . _upostag
+      , showM . _xpostag
+      , show  . _feats
+      , showM . _dephead
+      , showM . _deprel
+      , show  . _deps
+      , showM . _misc
       ]
 
-diffSTks :: [String] ->[Token] -> [Token] -> [TokenDiff]
-diffSTks ls sts1 sts2 =
+diffSTks :: [Token] -> [Token] -> [TokenDiff]
+diffSTks sts1 sts2 =
   if'
-    (((==) `on` length) sts1 sts2)
-    (let tis = map _ix sts1
-     in zip tis $ zipWithM (\t1 t2 -> diffSTkOn ls t1 t2) sts1 sts2)
+    (length sts1 == length sts2)
+    (filter (uncurry diffSTk) $ zip sts1 sts2)
     []
 
 diffSent :: Sentence -> Sentence -> Maybe SentDiff
 diffSent s1 s2 =
   let dtks = diffSTks (sentSTks s1) (sentSTks s2)
+      sid  = sentId s1
   in if null dtks
        then Nothing
-       else Just (sentId s1, dtks)
+       else Just (sid, dtks)
 
 diffSents :: [Sentence] -> [Sentence] -> [SentDiff]
 diffSents []  _  = []
@@ -69,15 +62,9 @@ diffDoc d1 d2 =
 
 ---
 -- auxiliary functions
-diffV :: Eq a => a -> a -> Maybe (a, a)
-diffV x y =
-  if x == y
-    then Nothing
-    else Just (x, y)
-
 showM :: Show a => Maybe a -> String
 showM (Just x) = show x
-showM Nothing  = ""
+showM Nothing  = "_"
 
 sentId :: Sentence -> Index
 sentId s =
@@ -86,27 +73,10 @@ sentId s =
   in read id :: Index
 
 ---
--- print
-printFieldDiff :: FieldDiff -> String
-printFieldDiff (la, (f, f')) = concat [la, ":", f, "->", f', "\n"]
-
-printTkDiff :: TokenDiff -> String
-printTkDiff (ix, fs) =
-  concat [show $ ix, "\n", concatMap printFieldDiff fs]
-
-printSentDiff :: SentDiff -> String
-printSentDiff (sid, ts) =
-  concat [show $ sid, "-sent--\n", concatMap printTkDiff ts, "\n"]
-
-printDocDiff :: DocDiff -> String
-printDocDiff (fs, ss) =
-  concat [fs, "-doc--\n\n", concatMap printSentDiff ss, "---"]
-
----
 -- main
 main :: IO ()
-main = do fp1:fp2:ls <- getArgs
+main = do [fp1,fp2] <- getArgs
           d1 <- readFile fp1
           d2 <- readFile fp2
-          putStrLn $ printDocDiff $ diffDoc d1 d2
+          putStrLn $ show $ diffDoc d1 d2
           return ()

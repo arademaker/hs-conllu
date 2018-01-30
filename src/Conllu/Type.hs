@@ -3,13 +3,13 @@ module Conllu.Type where
 ---
 -- imports
 
-import           Control.Exception.Base
-import           Data.Char
-import           Data.Function
-import           Data.List
-import           Data.Maybe
-import           Data.Ord
-import           Data.Tree
+import Control.Exception.Base
+import Data.Char
+import Data.Function
+import Data.List
+import Data.Maybe
+import Data.Ord
+import Data.Tree
 
 ---
 -- type and data declarations

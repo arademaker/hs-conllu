@@ -33,3 +33,9 @@ deleteWith p (a:at) =
 
 filterF :: Foldable f => (a -> Bool) -> f a -> [a]
 filterF p = foldMap (\a -> if p a then [a] else [])
+
+equal :: Eq a => a -> a -> Bool
+equal = (==)
+
+applyWithLabel :: (a -> b) -> (c, a) -> (c, b)
+applyWithLabel f (l, x) = (l, f x)
