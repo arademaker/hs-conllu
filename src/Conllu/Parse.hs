@@ -21,11 +21,12 @@ import Data.List
 import Data.Maybe
 import System.Environment
 import System.IO
+import Data.Void
 
-import Text.Parsec hiding (token)
-import Text.Parsec.Combinator
-import Text.Parsec.String
-import Text.ParserCombinators.Parsec.Char
+import qualified Text.Megaparsec as M
+import Text.Megaparsec.Char
+
+type Parser = M.Parsec Void String
 
 ---
 -- conllu parsers
@@ -33,7 +34,7 @@ document :: Parser [Sentence]
 document = documentC sentence
 
 documentC :: Parser Sentence -> Parser [Sentence]
-documentC s = endBy1 s blankLine <* eof
+documentC s = M.endBy1 s blankLine <* M.eof
 
 blankLine :: Parser ()
 blankLine = litSpaces <* newline -- spaces shouldn't exist, but no
@@ -43,7 +44,7 @@ sentence :: Parser Sentence
 sentence = sentenceC comment token
 
 sentenceC :: Parser Comment -> Parser Token -> Parser Sentence
-sentenceC c t = liftM2 Sentence (many c) (many1 t)
+sentenceC c t = liftM2 Sentence (M.many c) (M.some t)
 
 comment :: Parser Comment
 comment = do char '#'
@@ -59,8 +60,8 @@ tokenC :: Parser Index -> Parser IxSep -> Parser Form -> Parser Lemma
   -> Parser Token
 tokenC ix is fo l up xp fe dh dr ds m =
   mkToken <$> ix
-  <*> optionMaybe is
-  <*> optionMaybe ix <* tab
+  <*> M.optional is
+  <*> M.optional ix <* tab
   <*> fo <* tab
   <*> l  <* tab
   <*> up <* tab
@@ -76,11 +77,11 @@ emptyField = do char '_'
                 return Nothing
 
 index :: Parser Index
-index = do ix <- many1 digit
+index = do ix <- M.some digitChar
            return (read ix :: Index)
 
 indexSep :: Parser IxSep
-indexSep = choice [char '-', char '.']
+indexSep = char '-' M.<|> char '.'
 
 form :: Parser Form
 form = maybeEmpty stringWSpaces
@@ -108,11 +109,11 @@ deprel = maybeEmpty deprel'
 
 deprel' :: Parser (Dep, Subtype)
 deprel' = do dep <- dep
-             st  <- option [] $ char ':' *> many1 letter
+             st  <- M.option [] $ char ':' *> M.some letterChar
              return (dep,st)
   where
     dep :: Parser Dep
-    dep = liftM mkDep $ many1 letter
+    dep = liftM mkDep $ M.some letterChar
 
 deps :: Parser Deps
 deps = listP $ listPair ':' index deprel'
@@ -124,18 +125,18 @@ misc = maybeEmpty stringWSpaces
 -- utility parsers
 litSpaces :: Parser ()
 -- because spaces consumes \t and \n
-litSpaces = skipMany $ char ' '
+litSpaces = M.skipMany $ char ' '
 
 commentPair :: Parser Comment
 commentPair =
-  keyValue '=' (stringNot "=\n\t") (option [] stringWSpaces)
+  keyValue '=' (stringNot "=\n\t") (M.option [] stringWSpaces)
 
 listPair :: Char -> Parser a -> Parser b -> Parser [(a, b)]
-listPair sep p q = sepBy1 (keyValue sep p q) (char '|')
+listPair sep p q = M.sepBy1 (keyValue sep p q) (char '|')
 
 stringNot :: String -> Parser String
 -- [ ] second litSpaces in symbol is redundant
-stringNot s = symbol . many1 $ noneOf s
+stringNot s = symbol . M.some $ satisfy (\c -> not $ c `elem` s)
 
 stringWSpaces :: Parser String
 stringWSpaces = stringNot "\t\n"
@@ -147,7 +148,7 @@ stringWOSpaces = stringNot " \t\n"
 -- parser combinators
 keyValue :: Char -> Parser a -> Parser b -> Parser (a, b)
 keyValue sep p q = do key   <- p
-                      optional $ char sep
+                      M.optional $ char sep
                       value <- q
                       return (key, value)
 
@@ -155,7 +156,7 @@ symbol :: Parser a -> Parser a
 symbol p = litSpaces *> p <* litSpaces
 
 maybeEmpty :: Parser a -> Parser (Maybe a)
-maybeEmpty p = emptyField <|> liftM Just p
+maybeEmpty p = emptyField M.<|> liftM Just p
 
 listP :: Parser [a] -> Parser [a]
 -- using a parser that returns a possibly empty list like sepBy and

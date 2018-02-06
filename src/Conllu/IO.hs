@@ -10,17 +10,17 @@ import System.Directory
 import System.Environment
 import System.FilePath
 import System.IO
-
-import Text.Parsec.String
+import qualified Text.Megaparsec as M
 
 ---
 -- uses customized parser
 readConlluFileWith :: Parser [Sentence] -> FilePath -> IO Document
 readConlluFileWith p f = do
-  r <- parseFromFile p f
+  d <- readFile f
+  let r = M.parse p f d
   case r of
     Left err -> do
-      print err
+      putStr . M.parseErrorPretty $ err
       return $ Document f []
     Right ss -> return $ Document (takeFileName f) ss
 
