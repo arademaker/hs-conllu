@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Conllu.Parse where
 
 {--
@@ -22,11 +23,12 @@ import Data.Maybe
 import System.Environment
 import System.IO
 import Data.Void
+import qualified Data.Text as T
 
 import qualified Text.Megaparsec as M
 import Text.Megaparsec.Char
 
-type Parser = M.Parsec Void String
+type Parser = M.Parsec Void Stream
 
 ---
 -- conllu parsers
@@ -134,14 +136,14 @@ commentPair =
 listPair :: Char -> Parser a -> Parser b -> Parser [(a, b)]
 listPair sep p q = M.sepBy1 (keyValue sep p q) (char '|')
 
-stringNot :: String -> Parser String
+stringNot :: Stream -> Parser Stream
 -- [ ] second litSpaces in symbol is redundant
 stringNot s = symbol . M.some $ satisfy (\c -> not $ c `elem` s)
 
-stringWSpaces :: Parser String
+stringWSpaces :: Parser Stream
 stringWSpaces = stringNot "\t\n"
 
-stringWOSpaces :: Parser String
+stringWOSpaces :: Parser Stream
 stringWOSpaces = stringNot " \t\n"
 
 ---

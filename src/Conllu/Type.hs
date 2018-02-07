@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Conllu.Type where
 
 ---
@@ -10,11 +11,14 @@ import Data.List
 import Data.Maybe
 import Data.Ord
 import Data.Tree
+import qualified Data.Text as T
 
 ---
 -- type and data declarations
+type Stream = T.Text
+
 data Document = Document
-  { _file      :: String
+  { _file      :: Stream
   , _sents     :: [Sentence]
   } deriving (Eq,Show)
 
@@ -23,8 +27,8 @@ data Sentence = Sentence
   , _tokens :: [Token]
   } deriving (Eq, Show)
 
-type Comment    = StringPair
-type StringPair = (String, String)
+type Comment    = StreamPair
+type StreamPair = (Stream, Stream)
 
 data Token
   = SToken { _ix      :: Index
@@ -59,16 +63,16 @@ data Token
 
 type Index   = Int
 type IxSep   = Char
-type Form    = Maybe String
-type Lemma   = Maybe String
+type Form    = Maybe T.Text
+type Lemma   = Maybe T.Text
 type PosTag  = Maybe Pos
-type Xpostag = Maybe String
-type Feats   = [StringPair]
+type Xpostag = Maybe T.Text
+type Feats   = [StreamPair]
 type Dephead = Maybe Index
 type DepRel  = Maybe (Dep,Subtype)
-type Subtype = String
+type Subtype = T.Text
 type Deps    = [(Index,(Dep,Subtype))]
-type Misc    = Maybe String
+type Misc    = Maybe T.Text
 
 _dep :: Token -> Maybe Dep
 _dep = dep . _deprel
@@ -147,8 +151,8 @@ type ETree = (TTree, [Token]) -- enhanced tree
 
 ---
 -- constructor functions
-mkDep :: String -> Dep
-mkDep = mkDep' . upcaseString
+mkDep :: Stream -> Dep
+mkDep = mkDep' . upcaseStream
   where
     mkDep' "ACL"        = ACL
     mkDep' "ADVCL"      = ADVCL
@@ -188,8 +192,8 @@ mkDep = mkDep' . upcaseString
     mkDep' "VOCATIVE"   = VOCATIVE
     mkDep' "XCOMP"      = XCOMP
 
-mkPos :: String -> Pos
-mkPos = mkPos' . upcaseString
+mkPos :: Stream -> Pos
+mkPos = mkPos' . upcaseStream
   where
     mkPos' "ADJ"      = ADJ
     mkPos' "ADP"      = ADP
@@ -270,8 +274,8 @@ eTokenOK h dr d = assNothing h $ assNothing dr $ assSomething d True
 
 ---
 -- utility functions
-upcaseString :: String -> String
-upcaseString = map toUpper
+upcaseStream :: Stream -> Stream
+upcaseStream = T.toUpper
 
 assNothing :: Maybe a -> Bool -> Bool
 assNothing m = assert (isNothing m)
