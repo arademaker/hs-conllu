@@ -2,30 +2,28 @@ module Conllu.Data.Lexicon where
 
 ---
 -- imports
-import Conllu.Type
+import           Conllu.Type
 
 import qualified Data.Map.Strict as M
-import Data.Maybe
-import Data.Monoid
+import           Data.Maybe
+import           Data.Monoid
+import           System.Environment
 
 -- TODO: generalize types
 -- TODO: use foldable instance
 
---- type
+---
+-- types
 data Trie a = Trie Bool (M.Map a (Trie a))
   deriving (Show)
 
-instance Foldable Trie where
-  foldr f z (Trie _ m) | M.null m = z
-                       | otherwise = foldr (\k v -> foldr f k v) z $ M.toList m
-
-
 type TTrie = Trie String
 
+---
+-- trie
 emptyMap :: M.Map k v
 emptyMap = M.empty
 
-{--
 emptyTTrie :: TTrie
 emptyTTrie = Trie False M.empty
 
@@ -50,9 +48,14 @@ memberLex (Trie _ m) (x:xt) =
        then False
        else memberLex tt xt
 
-membersLex :: TTrie -> [String]
-membersLex = mapToList ""
-  where
-    mapToList k (Trie _ m) = concatMap (\t -> map (k ++) $ membersLex t) $ M.elems m
--- (k -> a -> m)
---}
+---
+-- recognizing
+
+---
+-- main
+main :: IO ()
+main = do (dicfp:fps) <- getArgs
+          dic <- readFile dicfp
+          let names = map words . lines $ dic
+              tt    = foldr (\x t -> insertLex t x) emptyTTrie names
+          return ()
