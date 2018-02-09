@@ -41,6 +41,9 @@ insertLex tt@(Trie v m) (x:xt) =
   let tt' = M.findWithDefault emptyTTrie x m
   in Trie v $ M.insert x (insertLex tt' xt) m
 
+beginTTrie :: [[String]] -> TTrie
+beginTTrie = L.foldr (flip insertLex) emptyTTrie
+
 memberLex :: TTrie -> [String] -> (InTrie, Maybe TTrie)
 memberLex tt@(Trie v _) [] =
   if v
@@ -54,24 +57,9 @@ memberLex (Trie _ m) (x:xt) =
 
 ---
 -- recognizing
-recTks :: TTrie -> [Token] -> [[Token]]
-{-- maybe use tails? and takeWhile Partially/Yes
-recTks tt (tk:tks) =
-  case memberLex tt [fromJust $ _form tk] of
-    (No, _) -> recTksRest
-    (Partially, Just tt') ->
-      recTksPartially (D.singleton tk) tt' tks ++ recTksRest
-    (Yes, _) -> tk : recTksRest
-  where
-    recTksRest = recTks tt tks
-    recTksPartially dl tt' (tk':tks') =
-      case memberLex tt' [fromJust $ _form tk'] of
-        (No, _) -> []
-        (Partially, Just tt'') ->
-          recTksPartially (D.snoc dl tk') tt'' tks'
-        (Yes, _) -> D.toList $ D.snoc dl tk'
---}
-recTks tt = filter (isJust . recLex tt . map (fromJust . _form)) . L.tails
+--recTks :: TTrie -> [Token] -> [[Token]]
+recTks tt =
+  catMaybes . map (recLex tt . map (fromJust . _form)) . L.tails
 
 -- > recLex tt ["joão", "das", "couves", "das", "trevas", undefined]
 -- > == Just ["jo\227o","das","couves"]
@@ -89,5 +77,5 @@ main :: IO ()
 main = do (dicfp:fps) <- getArgs
           dic <- readFile dicfp
           let names = map words . lines $ dic
-              tt    = foldr (flip insertLex) emptyTTrie names
+              tt    = beginTTrie names
           return ()
