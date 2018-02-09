@@ -4,6 +4,7 @@ module Conllu.Data.Lexicon where
 -- imports
 import           Conllu.Type
 
+import qualified Data.List as L
 import qualified Data.Map.Strict as M
 import           Data.Maybe
 import           Data.Monoid
@@ -40,25 +41,47 @@ insertLex tt@(Trie v m) (x:xt) =
   let tt' = M.findWithDefault emptyTTrie x m
   in Trie v $ M.insert x (insertLex tt' xt) m
 
-memberLex :: TTrie -> [String] -> InTrie
--- terrible code
-memberLex (Trie v _) [] = if v then Yes else Partially
+memberLex :: TTrie -> [String] -> (InTrie, Maybe TTrie)
+memberLex tt@(Trie v _) [] =
+  if v
+    then (Yes, Nothing)
+    else (Partially, Just tt)
 memberLex (Trie _ m) (x:xt) =
   let mt = M.lookup x m
   in case mt of
-    Nothing -> No
-    Just t -> memberLex t xt
+       Nothing -> (No, Nothing)
+       Just t -> memberLex t xt
 
 ---
 -- recognizing
-recTks :: TTrie -> [Token] -> [Token]
-recTks tt (tk:tks) = case memberLex tt [fromJust $ _form tk] of
-  No -> recTks tt tks
-  Partially -> tk:(recTks tt tks) ++ recTks tt tks
-  Yes -> [tk] ++ recTks tt tks
+recTks :: TTrie -> [Token] -> [[Token]]
+{-- maybe use tails? and takeWhile Partially/Yes
+recTks tt (tk:tks) =
+  case memberLex tt [fromJust $ _form tk] of
+    (No, _) -> recTksRest
+    (Partially, Just tt') ->
+      recTksPartially (D.singleton tk) tt' tks ++ recTksRest
+    (Yes, _) -> tk : recTksRest
+  where
+    recTksRest = recTks tt tks
+    recTksPartially dl tt' (tk':tks') =
+      case memberLex tt' [fromJust $ _form tk'] of
+        (No, _) -> []
+        (Partially, Just tt'') ->
+          recTksPartially (D.snoc dl tk') tt'' tks'
+        (Yes, _) -> D.toList $ D.snoc dl tk'
+--}
+recTks tt = filter (isJust . recLex tt . map (fromJust . _form)) . L.tails
 
---recTksPartially :: TTrie -> [Token] -> [Token]
---recTksPartially tt tks = 
+-- > recLex tt ["joão", "das", "couves", "das", "trevas", undefined]
+-- > == Just ["jo\227o","das","couves"]
+recLex :: TTrie -> [String] -> Maybe [String]
+recLex tt =
+  fmap snd .
+  L.find (\(inT, _) -> inT == Yes) .
+  reverse .
+  takeWhile (\(inT, _) -> inT == Partially || Yes == inT) .
+  map (\s -> (fst $ memberLex tt s, s)) . tail . L.inits
 
 ---
 -- main
@@ -66,5 +89,5 @@ main :: IO ()
 main = do (dicfp:fps) <- getArgs
           dic <- readFile dicfp
           let names = map words . lines $ dic
-              tt    = foldr (\x t -> insertLex t x) emptyTTrie names
+              tt    = foldr (flip insertLex) emptyTTrie names
           return ()
