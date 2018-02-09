@@ -7,7 +7,7 @@
   include tree building and processing functions, relation extraction,
   and tree linearization.
 
-* Installation
+* installation
   #+BEGIN_SRC sh
   cd /path/of/choice/
   git clone $REPO_URL
@@ -32,7 +32,7 @@
   if you don't want to have this kind of problem anymore, try [[https://docs.haskellstack.org/en/stable/README/][stack]]
   (see why [[https://www.fpcomplete.com/blog/2015/06/why-is-stack-not-cabal][here]]).
 
-* Usage
+* usage
    currently there is not much functionality besides the parser and a
    few utility functions.
 
@@ -61,7 +61,7 @@
    I didn't make the parser as customizable as it could be, so if that
    bothers you create and issue or file a PR, please!
 
-* Contributing
+* contributing
   I'm a new haskeller, so any help will probably be useful -- even if
   its just a few pointers and comments on how I can improve the
   library or my code.
