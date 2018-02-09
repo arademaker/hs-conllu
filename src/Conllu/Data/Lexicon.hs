@@ -59,17 +59,26 @@ memberLex (Trie _ m) (x:xt) =
 -- recognizing
 --recTks :: TTrie -> [Token] -> [[Token]]
 recTks tt =
-  catMaybes . map (recLex tt . map (fromJust . _form)) . L.tails
+  map
+    (\tks ->
+       let res =
+             fmap length .
+             recLex tt . L.inits . map (fromJust . _form) $ tks
+       in if isJust res
+            then take (fromJust res) tks
+            else []) .
+  L.tails 
+--  catMaybes . map recLex tt . L.tails . map (\t -> (t, fromJust . _form))
 
 -- > recLex tt ["joão", "das", "couves", "das", "trevas", undefined]
 -- > == Just ["jo\227o","das","couves"]
-recLex :: TTrie -> [String] -> Maybe [String]
+recLex :: TTrie -> [[String]] -> Maybe [String]
 recLex tt =
   fmap snd .
   L.find (\(inT, _) -> inT == Yes) .
   reverse .
   takeWhile (\(inT, _) -> inT == Partially || Yes == inT) .
-  map (\s -> (fst $ memberLex tt s, s)) . tail . L.inits
+  map (\ss-> (fst $ memberLex tt ss, ss)) . tail
 
 ---
 -- main
