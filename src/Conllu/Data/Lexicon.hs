@@ -3,6 +3,7 @@ module Conllu.Data.Lexicon where
 ---
 -- imports
 import           Conllu.Type
+import           Conllu.IO
 
 import qualified Data.List as L
 import qualified Data.Map.Strict as M
@@ -71,8 +72,6 @@ recTks tt tks =
        []
        (L.tails tks)
 
--- > recLex tt ["joão", "das", "couves", "das", "trevas", undefined]
--- > == Just ["jo\227o","das","couves"]
 recLex :: TTrie -> [[String]] -> Maybe [String]
 recLex tt =
   fmap snd .
@@ -88,4 +87,6 @@ main = do (dicfp:fps) <- getArgs
           dic <- readFile dicfp
           let names = map words . lines $ dic
               tt    = beginTTrie names
+          ds <- mapM readConlluFile fps
+          let ss = concatMap _sents ds
           return ()

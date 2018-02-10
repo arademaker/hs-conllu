@@ -281,3 +281,8 @@ assSomething m = assert (isJust m)
 
 assNull :: [a] -> Bool -> Bool
 assNull l = assert (null l)
+
+---
+-- utility functions
+actOnSentTks :: ([Token] -> [Token]) -> Sentence -> Sentence
+actOnSentTks f s@Sentence{_tokens=tks} = s{_tokens=f tks}
