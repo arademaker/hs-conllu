@@ -286,3 +286,18 @@ assNull l = assert (null l)
 -- utility functions
 actOnSentTks :: ([Token] -> [Token]) -> Sentence -> Sentence
 actOnSentTks f s@Sentence{_tokens=tks} = s{_tokens=f tks}
+
+actOnDocTks :: ([Token] -> [Token]) -> Document -> Document
+actOnDocTks f d@Document {_sents = ss} =
+  d {_sents = map (actOnSentTks f) ss}  
+
+sentTksByType :: Sentence -> ([Token],[Token])
+-- ([SToken],[metaTokens:EToken,MToken])
+sentTksByType Sentence{_tokens=ts} = partition isSToken ts
+
+isSToken :: Token -> Bool
+isSToken SToken{} = True
+isSToken _        = False
+
+sentSTks :: Sentence -> [Token]
+sentSTks = fst . sentTksByType

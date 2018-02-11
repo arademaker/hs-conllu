@@ -81,12 +81,56 @@ recLex tt =
   map (\ss-> (fst $ memberLex tt ss, ss)) . tail
 
 ---
+-- correcting
+correctTkHead :: Index -> Token -> Token
+correctTkHead hi t@SToken{} = t {_dephead = Just hi}
+correctToken _hi t = t
+
+correctTkDep :: [Dep] -> Token -> Token
+correctTkDep ds t@SToken {_deprel = Just (dep, _)} =
+  if dep `notElem` ds
+    then t {_deprel = Just (FLAT, "name")}
+    else t
+correctTkDep _ds t = t
+
+correctLex
+  :: [(Index, Index)]
+  -> (Index -> Token -> Token) -- correct by ID (inside name)
+  -> (Index -> Token -> Token) -- correct by HEAD (pointing to name)
+  -> [Token]
+  -> [Token]
+correctLex _as _fi _fh [] = []
+correctLex as fi fh (t:tt) =
+  let mi = L.lookup (_ix t) as
+      mh = L.lookup (fromMaybe 0 . _dephead $ t) as
+      correctRest = correctLex as fi fh tt
+  in case (mi, mh) of
+       (Nothing, Nothing) -> t : correctRest
+       (Nothing, Just h) -> fh h t : correctRest
+       (Just i, _) -> fi i t : correctRest
+
+mkCorrectAssoc :: [[Token]] -> [(Index, Index)]
+mkCorrectAssoc =
+  concatMap (\ts -> map (\t -> (_ix t, _ix $ head ts)) $ tail ts)
+
+correctTks :: TTrie -> [Token] -> [Token]
+correctTks tt tks =
+  let l = recTks tt (filter isSToken tks)
+      as = mkCorrectAssoc l
+  in correctLex
+       as
+       (\i -> correctTkDep [] . correctTkHead i)
+       correctTkHead
+       tks
+---
 -- main
 main :: IO ()
-main = do (dicfp:fps) <- getArgs
-          dic <- readFile dicfp
-          let names = map words . lines $ dic
-              tt    = beginTTrie names
-          ds <- mapM readConlluFile fps
-          let ss = concatMap _sents ds
-          return ()
+main = do
+  (dicfp:fps) <- getArgs
+  dic <- readFile dicfp
+  let names = map words . lines $ dic
+      tt = beginTTrie names
+  ds <- mapM readConlluFile fps
+  let ss = concatMap (concatMap (recTks tt . sentSTks) . _sents) ds
+  print ss
+  return ()

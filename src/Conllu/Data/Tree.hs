@@ -15,17 +15,6 @@ toETree s =
   let (sts, mts) = sentTksByType s
   in (sTksToTTree sts, mts)
 
-sentSTks :: Sentence -> [Token]
-sentSTks = fst . sentTksByType
-
-sentTksByType :: Sentence -> ([Token],[Token])
--- ([SToken],[metaTokens:EToken,MToken])
-sentTksByType Sentence{_tokens=ts} = partition isSToken ts
-
-isSToken :: Token -> Bool
-isSToken SToken{} = True
-isSToken _        = False
-
 sTksToTTree :: [Token] -> TTree
 sTksToTTree ts =
   let (Just rt) = find isRoot ts
