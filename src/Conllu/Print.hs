@@ -1,6 +1,7 @@
 module Conllu.Print where
 
 import Conllu.Type
+import Conllu.Utils
 
 import Data.List
 import Data.Maybe
@@ -20,40 +21,44 @@ toDiffList :: [a] -> DiffList a
 toDiffList xs = DiffList (xs++)  
   
 fromDiffList :: DiffList a -> [a]  
-fromDiffList (DiffList f) = f []  
+fromDiffList (DiffList f) = f []
 
 ---
 -- printing
-printDoc :: Document -> [String]
+printDoc :: Document -> String
 printDoc = fromDiffList . mconcat . map printSent . _sents
 
-printSent :: Sentence -> DiffList String
+printSent :: Sentence -> DiffList Char
 printSent ss =
   mconcat
     [ printComments (_meta ss)
     , diffLSpace
     , printTks (_tokens ss)
+    , diffLSpace
     ]
 
-printComments :: [Comment] -> DiffList String
+printComments :: [Comment] -> DiffList Char
 printComments =
   toDiffList .
+  concat .
   intersperse "\n" .
   map
     (\(c1, c2) ->
-       "# " ++
-       c1 ++
-       if null c2
-         then ""
-         else "= " ++ c2)
+       concat
+         [ "# "
+         , c1
+         , if null c2
+             then ""
+             else "= " ++ c2
+         ])
 
-printTks :: [Token] -> DiffList String
+printTks :: [Token] -> DiffList Char
 printTks = foldr (\t dl -> mconcat [printTk t, diffLSpace, dl]) mempty
 
-printTk :: Token -> DiffList String
+printTk :: Token -> DiffList Char
 printTk t = printTk' t
   where
-    tkLine = toDiffList . intersperse "\t" . map (\f -> f t)
+    tkLine = toDiffList . concat . intersperse "\t" . map (\f -> f t)
     printTk' t
       | isSToken t =
         tkLine
@@ -68,30 +73,57 @@ printTk t = printTk' t
           , printDeps
           , printMisc
           ]
-      | isMTk t = tkLine [printIx, show . _end, printForm, printMisc]
+      | isMTk t =
+        tkLine
+          [ printMetaIx "-" (show . _end)
+          , printForm
+          , emptyF
+          , emptyF
+          , emptyF
+          , emptyF
+          , emptyF
+          , emptyF
+          , emptyF
+          , printMisc
+          ]
       | otherwise =
         tkLine
-          [ printIx
-          , show . _childIx
+          [ printMetaIx "." (show . _childIx)
           , printForm
           , printLemma
           , printPostag
           , printXpostag
           , printFeats
+          , emptyF
+          , emptyF
           , printDeps
           , printMisc
           ]
     printMStr = fromMaybe "_"
     printIx = show . _ix
+    printMetaIx d p t = concat [printIx t, d, p t]
     printForm = printMStr . _form
     printLemma = printMStr . _lemma
     printPostag = printPos . _upostag
     printXpostag = printMStr . _xpostag
-    printFeats = printList (uncurry (++)) . _feats
+    printFeats =
+      printList
+        (\(f, v) ->
+           f ++
+           if null v
+             then ""
+             else "=" ++ v) .
+      _feats
     printDeps =
       printList (\(i, dr) -> show i ++ ":" ++ printDeprel dr) . _deps
-    printDeprel = (\(d, s) -> show d ++ ":" ++ s)
+    printDeprel =
+      (\(d, s) ->
+         (downcaseStr $ show d) ++
+         if null s
+           then ""
+           else ":" ++ s)
     printMisc = fromMaybe "_" . _misc
+    emptyF t = "_"
 
 printPos :: PosTag -> String
 printPos (Just AUXpos) = "AUX"
@@ -109,5 +141,5 @@ printList f = nullToStr . concat . intersperse "|" . map f
         then "_"
         else xs
 
-diffLSpace :: DiffList String
-diffLSpace = toDiffList ["\n"]
+diffLSpace :: DiffList Char
+diffLSpace = toDiffList "\n"
