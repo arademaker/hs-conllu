@@ -1,7 +1,30 @@
 module Conllu.Utils where
 
+import Control.Exception.Base
+import Data.Char
 import Data.Maybe
 
+---
+-- char functions
+upcaseStr :: String -> String
+upcaseStr = map toUpper
+
+downcaseStr :: String -> String
+downcaseStr = map toLower
+
+---
+-- assertions
+assNothing :: Maybe a -> Bool -> Bool
+assNothing m = assert (isNothing m)
+
+assSomething :: Maybe a -> Bool -> Bool
+assSomething m = assert (isJust m)
+
+assNull :: [a] -> Bool -> Bool
+assNull l = assert (null l)
+
+---
+-- function tools
 if' :: Bool -> a -> a -> a
 if' True  x _ = x
 if' False _ y = y

@@ -2,6 +2,7 @@ module Conllu.Type where
 
 ---
 -- imports
+import Conllu.Utils
 
 import Control.Exception.Base
 import Data.Char
@@ -85,7 +86,7 @@ data Dep
   | ADVMOD
   | AMOD
   | APPOS
-  | AUXdr
+  | AUX
   | CASE
   | CC
   | CCOMP
@@ -95,7 +96,7 @@ data Dep
   | COP
   | CSUBJ
   | DEP
-  | DETdr
+  | DET
   | DISCOURSE
   | DISLOCATED
   | EXPL
@@ -112,12 +113,12 @@ data Dep
   | OBL
   | ORPHAN
   | PARATAXIS
-  | PUNCTdr
+  | PUNCT
   | REPARANDUM
   | ROOT
   | VOCATIVE
   | XCOMP
-  deriving (Eq, Show)
+  deriving (Eq, Read, Show)
 
 data Pos
   = ADJ
@@ -137,7 +138,7 @@ data Pos
   | SYM
   | VERB
   | X
-  deriving (Eq, Show)
+  deriving (Eq, Read, Show)
 
 -- trees
 type TTree  = Tree Token -- only STokens
@@ -148,79 +149,28 @@ type ETree = (TTree, [Token]) -- enhanced tree
 ---
 -- constructor functions
 mkDep :: String -> Dep
-mkDep = mkDep' . upcaseString
-  where
-    mkDep' "ACL"        = ACL
-    mkDep' "ADVCL"      = ADVCL
-    mkDep' "ADVMOD"     = ADVMOD
-    mkDep' "AMOD"       = AMOD
-    mkDep' "APPOS"      = APPOS
-    mkDep' "AUX"        = AUXdr
-    mkDep' "CASE"       = CASE
-    mkDep' "CC"         = CC
-    mkDep' "CCOMP"      = CCOMP
-    mkDep' "CLF"        = CLF
-    mkDep' "COMPOUND"   = COMPOUND
-    mkDep' "CONJ"       = CONJ
-    mkDep' "COP"        = COP
-    mkDep' "CSUBJ"      = CSUBJ
-    mkDep' "DEP"        = DEP
-    mkDep' "DET"        = DETdr
-    mkDep' "DISCOURSE"  = DISCOURSE
-    mkDep' "DISLOCATED" = DISLOCATED
-    mkDep' "EXPL"       = EXPL
-    mkDep' "FIXED"      = FIXED
-    mkDep' "FLAT"       = FLAT
-    mkDep' "GOESWITH"   = GOESWITH
-    mkDep' "IOBJ"       = IOBJ
-    mkDep' "LIST"       = LIST
-    mkDep' "MARK"       = MARK
-    mkDep' "NMOD"       = NMOD
-    mkDep' "NSUBJ"      = NSUBJ
-    mkDep' "NUMMOD"     = NUMMOD
-    mkDep' "OBJ"        = OBJ
-    mkDep' "OBL"        = OBL
-    mkDep' "ORPHAN"     = ORPHAN
-    mkDep' "PARATAXIS"  = PARATAXIS
-    mkDep' "PUNCT"      = PUNCTdr
-    mkDep' "REPARANDUM" = REPARANDUM
-    mkDep' "ROOT"       = ROOT
-    mkDep' "VOCATIVE"   = VOCATIVE
-    mkDep' "XCOMP"      = XCOMP
+mkDep = read . upcaseStr
 
 mkPos :: String -> Pos
-mkPos = mkPos' . upcaseString
+mkPos = mkPos' . upcaseStr
   where
-    mkPos' "ADJ"      = ADJ
-    mkPos' "ADP"      = ADP
-    mkPos' "ADV"      = ADV
-    mkPos' "AUX"      = AUXpos
-    mkPos' "CCONJ"    = CCONJ
-    mkPos' "DET"      = DETpos
-    mkPos' "INTJ"     = INTJ
-    mkPos' "NOUN"     = NOUN
-    mkPos' "NUM"      = NUM
-    mkPos' "PART"     = PART
-    mkPos' "PRON"     = PRON
-    mkPos' "PROPN"    = PROPN
-    mkPos' "PUNCT"    = PUNCTpos
-    mkPos' "SCONJ"    = SCONJ
-    mkPos' "SYM"      = SYM
-    mkPos' "VERB"     = VERB
-    mkPos' "X"        = X
+    mkPos' "AUX" = AUXpos
+    mkPos' "DET" = DETpos
+    mkPos' "PUNCT" = PUNCTpos
+    mkPos' pos = read pos
 
 -- tokens
 mkToken :: Index -> Maybe IxSep -> Maybe Index -> Form -> Lemma
   ->  PosTag -> Xpostag -> Feats -> Dephead -> DepRel -> Deps
   -> Misc -> Token
 mkToken i sep ci = case sep of
-  Nothing  -> mkSToken i
-  Just '-' -> mkMToken i (fromJust ci)
-  Just '.' -> mkEToken i (fromJust ci)
+  Nothing  -> mkSTk i
+  Just '-' -> mkMTk i (fromJust ci)
+  Just '.' -> mkETk i (fromJust ci)
 
-mkSToken :: Index -> Form -> Lemma -> PosTag -> Xpostag
+mkSTk :: Index -> Form -> Lemma -> PosTag -> Xpostag
   -> Feats -> Dephead -> DepRel -> Deps -> Misc -> Token
-mkSToken i fo l up xp fe h dr d m =
+mkSTk i fo l up xp fe h dr d m =
   SToken { _ix      = i
          , _form    = fo
          , _lemma   = l
@@ -233,16 +183,17 @@ mkSToken i fo l up xp fe h dr d m =
          , _misc    = m
          }
 
-mkMToken :: Index ->  Index -> Form -> Lemma -> PosTag -> Xpostag
+mkMTk :: Index ->  Index -> Form -> Lemma -> PosTag -> Xpostag
   -> Feats -> Dephead -> DepRel -> Deps -> Misc -> Token
-mkMToken s e fo l up xp fe h dr d m =
+mkMTk s e fo l up xp fe h dr d m =
   assert
-    (mTokenOK fo l up xp fe h dr d)
+    (mTkOK fo l up xp fe h dr d)
     MToken {_ix = s, _end = e, _form = fo, _misc = m}
 
-mkEToken :: Index ->  Index -> Form -> Lemma -> PosTag -> Xpostag
+mkETk :: Index ->  Index -> Form -> Lemma -> PosTag -> Xpostag
   -> Feats -> Dephead -> DepRel -> Deps -> Misc -> Token
-mkEToken i ci fo l up xp fe h dr d m =
+mkETk i ci fo l up xp fe h dr d m =
+  assert (eTkOK h dr d)
   EToken
   { _ix      = i
   , _childIx = ci
@@ -257,30 +208,18 @@ mkEToken i ci fo l up xp fe h dr d m =
 
 ---
 -- validation
-mTokenOK :: Form -> Lemma -> PosTag -> Xpostag -> Feats -> Dephead
+mTkOK :: Form -> Lemma -> PosTag -> Xpostag -> Feats -> Dephead
   -> DepRel -> Deps -> Bool
-mTokenOK fo l up xp fe h dr d =
+mTkOK fo l up xp fe h dr d =
   assSomething fo $
   assNothing l $
   assNothing up $
   assNothing xp $
   assNull fe $ assNothing h $ assNothing dr $ assNull d True
 
-eTokenOK h dr d = assNothing h $ assNothing dr $ assSomething d True
-
----
--- utility functions
-upcaseString :: String -> String
-upcaseString = map toUpper
-
-assNothing :: Maybe a -> Bool -> Bool
-assNothing m = assert (isNothing m)
-
-assSomething :: Maybe a -> Bool -> Bool
-assSomething m = assert (isJust m)
-
-assNull :: [a] -> Bool -> Bool
-assNull l = assert (null l)
+eTkOK :: Dephead -> DepRel -> Deps -> Bool
+eTkOK h dr d =
+  assNothing h $ assNothing dr $ (assert . not . null $ d) True
 
 ---
 -- utility functions
@@ -298,6 +237,10 @@ sentTksByType Sentence{_tokens=ts} = partition isSToken ts
 isSToken :: Token -> Bool
 isSToken SToken{} = True
 isSToken _        = False
+
+isMTk :: Token -> Bool
+isMTk MToken{} = True
+isMTk _tk      = False
 
 sentSTks :: Sentence -> [Token]
 sentSTks = fst . sentTksByType
