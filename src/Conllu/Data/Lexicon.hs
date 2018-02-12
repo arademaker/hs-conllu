@@ -124,6 +124,8 @@ correctLex as fi fh (t:tt) =
 
 mkCorrectAssoc :: [[Token]] -> [(Index, Index)]
 mkCorrectAssoc =
+  L.nubBy (\p1 p2 -> fst p1 == fst p2) . -- rm tks recognized in more
+                                         -- than one name
   concatMap (\ts -> map (\t -> (_ix t, _ix $ head ts)) $ tail ts)
 
 correctTks :: TTrie -> [Token] -> [Token]
