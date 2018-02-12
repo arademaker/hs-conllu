@@ -99,12 +99,10 @@ correctTkHead :: Index -> Token -> Token
 correctTkHead hi t@SToken{} = t {_dephead = Just hi}
 correctToken _hi t = t
 
-correctTkDep :: [Dep] -> Token -> Token
-correctTkDep ds t@SToken {_deprel = Just (dep, _)} =
-  if dep `notElem` ds
-    then t {_deprel = Just (FLAT, "name")}
-    else t
-correctTkDep _ds t = t
+correctTkDep :: Token -> Token
+correctTkDep t@SToken {_deprel = Just (dep, _)} =
+  t {_deprel = Just (FLAT, "name")}
+correctTkDep t = t
 
 correctLex
   :: [(Index, Index)]
@@ -134,7 +132,10 @@ correctTks tt tks =
       as = mkCorrectAssoc l
   in correctLex
        as
-       (\i -> correctTkDep [NMOD,PUNCT,CASE] . correctTkHead i)
+       (\i tk ->
+          if _dep tk `notElem` map Just [NMOD, PUNCT, CASE]
+            then correctTkDep $ correctTkHead i tk
+            else tk)
        correctTkHead
        tks
 ---
@@ -147,7 +148,7 @@ readLexAndTokenize fp m = do
 
 main :: IO ()
 main = do
-  (toks':dicfp:fps) <- getArgs
+  (toks':dicfp:outfp:fps) <- getArgs
   toks <- readFile toks'
   let tokenizations = M.fromList . map readTokenization $ lines toks
   names <- readLexAndTokenize dicfp tokenizations
@@ -163,6 +164,6 @@ main = do
           ds
   zipWithM_
     writeConlluFile
-    (map (`replaceExtensions` ".lex.conllu") fps)
+    (map (`replaceDirectory` outfp) fps)
     dss
   return ()
