@@ -50,10 +50,10 @@ diffSents :: [Sentence] -> [Sentence] -> [SentDiff]
 diffSents []  _  = []
 diffSents _ss [] = []
 diffSents ss1@(s1:st1) ss2@(s2:st2) =
-  case (comparing sentId s1 s2) of
+  case comparing sentId s1 s2 of
     LT -> diffSents st1 ss2
     GT -> diffSents ss1 st2
-    EQ -> (diffSent s1 s2) ?: diffSents st1 st2
+    EQ -> diffSent s1 s2 ?: diffSents st1 st2
 
 diffDoc :: Document -> Document -> DocDiff
 diffDoc d1 d2 =
@@ -77,5 +77,5 @@ main :: IO ()
 main = do [fp1,fp2] <- getArgs
           d1 <- readConlluFile fp1
           d2 <- readConlluFile fp2
-          putStrLn $ show $ diffDoc d1 d2
+          print $ diffDoc d1 d2
           return ()
