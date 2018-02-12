@@ -67,12 +67,13 @@
    #+END_SRC
    is probably the only one you will need. running
    #+BEGIN_SRC sh
-   runghc IO.hs 1.conllu 1-pp.conllu
+   runghc IO.hs 1.conllu 2.conllu ...
    #+END_SRC
-   will parse and print the file =1.conllu= to =1-pp.conllu=. you can
-   use the =diff= utility to check if there are any differences, but
-   the only ones should be in removing wrong spacing -- any others
-   would probably make the parser raise an exception.
+   will parse and print the files to standard output. you can use the
+   =diff= utility to check if there are any differences, but the only
+   ones should be in removing wrong spacing -- any others would
+   probably make the parser raise an exception. if not, open an issue
+   to let me know!
 ** correcting CoNLL-U files with a lexicon
    sometimes a parser will tag names incorrectly. this can be wrong
    HEAD assignments, wrong DEPREL assignments, or it might have other

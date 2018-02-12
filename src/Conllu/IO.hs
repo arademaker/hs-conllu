@@ -58,7 +58,7 @@ writeConlluFile fp = writeFile fp . printDoc
 -- main
 main :: IO ()
 main = do
-  [input,output] <- getArgs
-  d <- readConlluFile input
-  writeConlluFile output d
+  fps <- getArgs
+  ds <- mapM readConlluFile fps
+  mapM_ (putStr . printDoc) ds
   return ()
