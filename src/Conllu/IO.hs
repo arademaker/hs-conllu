@@ -5,6 +5,7 @@ module Conllu.IO where
 import Conllu.Type
 import Conllu.Utils
 import Conllu.Parse
+import Conllu.Print
 
 import System.Directory
 import System.Environment
@@ -14,6 +15,8 @@ import System.IO
 import Text.Parsec.String
 
 ---
+-- read
+
 -- uses customized parser
 readConlluFileWith :: Parser [Sentence] -> FilePath -> IO Document
 readConlluFileWith p f = do
@@ -45,6 +48,11 @@ readDirectory = readDirectoryWith document
 
 readConllu :: FilePath -> IO [Document]
 readConllu = readConlluWith document
+
+---
+-- write
+writeConlluFile :: FilePath -> Document -> IO ()
+writeConlluFile fp = writeFile fp . printDoc
 
 ---
 -- main

@@ -223,6 +223,16 @@ eTkOK h dr d =
 
 ---
 -- utility functions
+tkOrd :: Token -> Token -> Ordering
+tkOrd t1 t2 =
+  let c = (compare `on` _ix) t1 t2
+  in case c of
+       EQ -> sameIx t1 t2
+       _ -> c
+  where
+    sameIx SToken {} _t = GT
+    sameIx _t SToken {} = LT
+
 actOnSentTks :: ([Token] -> [Token]) -> Sentence -> Sentence
 actOnSentTks f s@Sentence{_tokens=tks} = s{_tokens=f tks}
 

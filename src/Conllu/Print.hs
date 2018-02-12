@@ -40,8 +40,7 @@ printSent ss =
 printComments :: [Comment] -> DiffList Char
 printComments =
   toDiffList .
-  concat .
-  intersperse "\n" .
+  intercalate "\n" .
   map
     (\(c1, c2) ->
        concat
@@ -58,7 +57,7 @@ printTks = foldr (\t dl -> mconcat [printTk t, diffLSpace, dl]) mempty
 printTk :: Token -> DiffList Char
 printTk t = printTk' t
   where
-    tkLine = toDiffList . concat . intersperse "\t" . map (\f -> f t)
+    tkLine = toDiffList . intercalate "\t" . map (\f -> f t)
     printTk' t
       | isSToken t =
         tkLine
@@ -116,12 +115,11 @@ printTk t = printTk' t
       _feats
     printDeps =
       printList (\(i, dr) -> show i ++ ":" ++ printDeprel dr) . _deps
-    printDeprel =
-      (\(d, s) ->
-         (downcaseStr $ show d) ++
-         if null s
-           then ""
-           else ":" ++ s)
+    printDeprel (d, s) =
+      downcaseStr (show d) ++
+      if null s
+        then ""
+        else ":" ++ s
     printMisc = fromMaybe "_" . _misc
     emptyF t = "_"
 
@@ -133,7 +131,7 @@ printPos Nothing = "_"
 printPos (Just _pos) = show _pos
 
 printList :: (a -> String) -> [a] -> String
-printList f = nullToStr . concat . intersperse "|" . map f
+printList f = nullToStr . intercalate "|" . map f
   where
     nullToStr :: String -> String
     nullToStr xs =

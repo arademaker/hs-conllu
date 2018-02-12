@@ -5,11 +5,13 @@ module Conllu.Data.Lexicon where
 import           Conllu.Type
 import           Conllu.IO
 
+import           Control.Monad
 import qualified Data.List as L
 import qualified Data.Map.Strict as M
 import           Data.Maybe
 import           Data.Monoid
 import           System.Environment
+import           System.FilePath
 
 -- TODO: generalize types
 -- TODO: use foldable instance
@@ -55,6 +57,17 @@ memberLex (Trie _ m) (x:xt) =
   in case mt of
        Nothing -> (No, Nothing)
        Just t -> memberLex t xt
+
+tokenize :: M.Map String [String] -> String -> [String]
+tokenize m s =
+  case M.lookup s m of
+    Nothing -> [s]
+    (Just s') -> s'
+
+readTokenization :: String -> (String, [String])
+readTokenization = readTkn . words
+  where
+    readTkn (s:st) = (s, st)
 
 ---
 -- recognizing
@@ -119,18 +132,35 @@ correctTks tt tks =
       as = mkCorrectAssoc l
   in correctLex
        as
-       (\i -> correctTkDep [] . correctTkHead i)
+       (\i -> correctTkDep [NMOD,PUNCT,CASE] . correctTkHead i)
        correctTkHead
        tks
 ---
--- main
+-- IO
+readLexAndTokenize :: FilePath -> M.Map String [String] -> IO [[String]]
+readLexAndTokenize fp m = do
+  dic <- readFile fp
+  let names = map (concatMap (tokenize m) . words) $ lines dic
+  return names
+
 main :: IO ()
 main = do
-  (dicfp:fps) <- getArgs
-  dic <- readFile dicfp
-  let names = map words . lines $ dic
-      tt = beginTTrie names
+  (toks':dicfp:fps) <- getArgs
+  toks <- readFile toks'
+  let tokenizations = M.fromList . map readTokenization $ lines toks
+  names <- readLexAndTokenize dicfp tokenizations
+  let tt = beginTTrie names
   ds <- mapM readConlluFile fps
-  let ss = concatMap (concatMap (recTks tt . sentSTks) . _sents) ds
-  print ss
+  let dss =
+        map
+          (actOnDocTks
+             (\tks ->
+                let (stks', mtks) = L.partition isSToken tks
+                    stks = correctTks tt stks'
+                in L.sortBy tkOrd (mtks ++ stks)))
+          ds
+  zipWithM_
+    writeConlluFile
+    (map (`replaceExtensions` ".lex.conllu") fps)
+    dss
   return ()

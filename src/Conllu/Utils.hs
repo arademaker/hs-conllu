@@ -26,8 +26,8 @@ assNull l = assert (null l)
 ---
 -- function tools
 if' :: Bool -> a -> a -> a
-if' True  x _ = x
-if' False _ y = y
+if' True  x  _b = x
+if' False _b y  = y
 
 (?:) :: Maybe a -> [a] -> [a]
 ma ?: as =
@@ -35,10 +35,10 @@ ma ?: as =
     (Just a) -> a : as
     Nothing  -> as
 
-zipWithM :: Monoid c => (a -> b -> c) -> [a] -> [b] -> c
-zipWithM _f []     _bs    = mempty
-zipWithM _f _as    []     = mempty
-zipWithM f  (a:at) (b:bt) = f a b `mappend` (zipWithM f at bt)
+zipWithNoid :: Monoid c => (a -> b -> c) -> [a] -> [b] -> c
+zipWithNoid _f []     _bs    = mempty
+zipWithNoid _f _as    []     = mempty
+zipWithNoid f  (a:at) (b:bt) = f a b `mappend` zipWithNoid f at bt
 
 filterMap :: (a -> Bool) -> (a -> b) -> [a] -> [b]
 filterMap _p _f [] = []
@@ -55,7 +55,7 @@ deleteWith p (a:at) =
     else a : deleteWith p at
 
 filterF :: Foldable f => (a -> Bool) -> f a -> [a]
-filterF p = foldMap (\a -> if p a then [a] else [])
+filterF p = foldMap (\a -> [a | p a])
 
 equal :: Eq a => a -> a -> Bool
 equal = (==)
