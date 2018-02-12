@@ -133,7 +133,7 @@ correctTks tt tks =
   in correctLex
        as
        (\i tk ->
-          if _dep tk `notElem` map Just [NMOD, PUNCT, CASE]
+          if _dep tk `notElem` map Just [DET, PUNCT, CASE]
             then correctTkDep $ correctTkHead i tk
             else tk)
        correctTkHead
