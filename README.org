@@ -7,7 +7,7 @@
   include tree building and processing functions, relation extraction,
   and tree linearization.
 
-* Installation
+* installation
   #+BEGIN_SRC sh
   cd /path/of/choice/
   git clone $REPO_URL
@@ -32,9 +32,8 @@
   if you don't want to have this kind of problem anymore, try [[https://docs.haskellstack.org/en/stable/README/][stack]]
   (see why [[https://www.fpcomplete.com/blog/2015/06/why-is-stack-not-cabal][here]]).
 
-* Usage
-   currently there is not much functionality besides the parser and a
-   few utility functions.
+* usage
+   if you would like to request features, please open an issue.
 
 ** Reading CoNLL-U files
    the reading functions are in the reader module.
@@ -61,7 +60,55 @@
    I didn't make the parser as customizable as it could be, so if that
    bothers you create and issue or file a PR, please!
 
-* Contributing
+** Pretty-Printing
+   the printing functions are in the =Print= module.
+   #+BEGIN_SRC haskell
+   printDoc :: Document -> String
+   #+END_SRC
+   is probably the only one you will need. running
+   #+BEGIN_SRC sh
+   runghc IO.hs 1.conllu 2.conllu ...
+   #+END_SRC
+   will parse and print the files to standard output. you can use the
+   =diff= utility to check if there are any differences, but the only
+   ones should be in removing wrong spacing -- any others would
+   probably make the parser raise an exception. if not, open an issue
+   to let me know!
+** correcting CoNLL-U files with a lexicon
+   sometimes a parser will tag names incorrectly. this can be wrong
+   HEAD assignments, wrong DEPREL assignments, or it might have other
+   tokens in the sentence pointing to a token in a name where would
+   like it to have it pointing to the HEAD of the name.
+   
+   this feature will read a list of names, will search for them in
+   input CoNLL-U documents, and will make a few corrections. names are
+   corrected as follows: all tokens in a name are made to point to the
+   HEAD of the name with =flat:name= as DEPREL, unless their DEPREL is
+   one of =case=, =nmod=, =punct=, in which case they are not
+   touched. moreover, any token in the sentence pointing to a token in
+   the name will be made to point to the name's HEAD.
+
+   this might not fit into everyone's wishes and languages, so I'd
+   like suggestions on how to generalize this module.
+
+*** usage
+    you will need:
+    - a lexicon :: a text file with a name on every line, with spaces
+                   separating the tokens: "Companhia de Águas, Energia
+                   e Algo" -> "Companhia de Águas , Energia e Algo"
+    - a tokenization list :: this is a text file with a word to be
+         tokenized on every line. the first token is the word, the
+         rest is its components, all separated by spaces, as in:
+         "vámonos vamos nos"
+    #+BEGIN_SRC sh
+      # compile script
+      runghc Lexicon.hs tokenizations.txt output-dir/ lexicon.txt 1.conllu 2.conllu ...
+    #+END_SRC
+    this will write corrected files to the =output-dir= (if you
+    specify the same directory as the files are in, they will be
+    overwritten -- don't do that).
+
+* contributing
   I'm a new haskeller, so any help will probably be useful -- even if
   its just a few pointers and comments on how I can improve the
   library or my code.
