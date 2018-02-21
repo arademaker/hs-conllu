@@ -13,18 +13,19 @@ module Conllu.Parse where
 ---
 -- imports
 
-import Conllu.Type
+import           Conllu.Type
 
-import Control.Monad
-import Data.Char
-import Data.List
-import Data.Maybe
-import System.Environment
-import System.IO
-import Data.Void
+import           Control.Monad
+import           Data.Char
+import           Data.List
+import           Data.Maybe
+import           System.Environment
+import           System.IO
+import           Data.Void
 
 import qualified Text.Megaparsec as M
-import Text.Megaparsec.Char
+import           Text.Megaparsec.Char
+import qualified Text.Megaparsec.Char.Lexer as L
 
 type Parser = M.Parsec Void String
 
@@ -34,11 +35,11 @@ document :: Parser [Sentence]
 document = documentC sentence
 
 documentC :: Parser Sentence -> Parser [Sentence]
-documentC s = M.endBy1 s blankLine <* M.eof
+documentC s = ws *> s `M.endBy1` blankLine <* M.eof
 
 blankLine :: Parser ()
-blankLine = litSpaces <* newline -- spaces shouldn't exist, but no
-                                 -- problem being lax here (I think)
+blankLine = lexeme . void $ newline -- spaces shouldn't exist, but no
+                                    -- problem being lax here
 
 sentence :: Parser Sentence
 sentence = sentenceC comment token
@@ -47,8 +48,9 @@ sentenceC :: Parser Comment -> Parser Token -> Parser Sentence
 sentenceC c t = liftM2 Sentence (M.many c) (M.some t)
 
 comment :: Parser Comment
-comment = do char '#'
-             commentPair <* newline
+comment = do
+  symbol "#" M.<?> "comment starter"
+  commentPair <* newline M.<?> "comment content"
 
 token :: Parser Token
 token = tokenC index indexSep form lemma upostag xpostag feats
@@ -73,70 +75,67 @@ tokenC ix is fo l up xp fe dh dr ds m =
   <*> m <* newline
 
 emptyField :: Parser (Maybe a)
-emptyField = do char '_'
-                return Nothing
+emptyField = symbol "_" *> return Nothing M.<?> "empty field"
 
 index :: Parser Index
-index = do ix <- M.some digitChar
-           return (read ix :: Index)
+index = do
+  ix <- M.some digitChar M.<?> "ID"
+  return (read ix :: Index)
 
 indexSep :: Parser IxSep
-indexSep = char '-' M.<|> char '.'
+indexSep = liftM head (symbol "-" M.<|> symbol "." M.<?> "meta separator")
 
 form :: Parser Form
-form = maybeEmpty stringWSpaces
+form = orEmpty stringWSpaces M.<?> "FORM"
 
 lemma :: Parser Lemma
-lemma = maybeEmpty stringWSpaces
+lemma = orEmpty stringWSpaces M.<?> "LEMMA"
 
 upostag :: Parser PosTag
-upostag = maybeEmpty upostag'
+upostag = maybeEmpty upostag' M.<?> "UPOSTAG"
   where
     upostag' :: Parser Pos
     upostag' = liftM mkPos stringWOSpaces
 
 xpostag :: Parser Xpostag
-xpostag = maybeEmpty stringWOSpaces
+xpostag = maybeEmpty stringWOSpaces M.<?> "XPOSTAG"
 
 feats :: Parser Feats
-feats = listP $ listPair '=' (stringNot "=") (stringNot "\t|")
+feats = listP (listPair "=" (stringNot "=") (stringNot "\t|") M.<?> "feature pair") M.<?> "FEATS"
 
 dephead :: Parser Dephead
-dephead = maybeEmpty $ symbol index
+dephead = maybeEmpty index M.<?> "HEAD"
 
 deprel :: Parser DepRel
 deprel = maybeEmpty deprel'
 
 deprel' :: Parser (Dep, Subtype)
-deprel' = do dep <- dep
-             st  <- M.option [] $ char ':' *> M.some letterChar
-             return (dep,st)
+deprel' = do
+  dep <- lexeme dep M.<?> "DEPREL"
+  st <- M.option [] $ symbol ":" *> (letters M.<?> "DEPREL subtype")
+  return (dep, st)
   where
+    letters = lexeme $ M.some letterChar
     dep :: Parser Dep
-    dep = liftM mkDep $ M.some letterChar
+    dep = liftM mkDep letters
 
 deps :: Parser Deps
-deps = listP $ listPair ':' index deprel'
+deps = listP (listPair ":" index deprel' M.<?> "DEPS pair")
 
 misc :: Parser Misc
-misc = maybeEmpty stringWSpaces
+misc = orEmpty stringWSpaces M.<?> "MISC"
 
 ---
 -- utility parsers
-litSpaces :: Parser ()
--- because spaces consumes \t and \n
-litSpaces = M.skipMany $ char ' '
-
 commentPair :: Parser Comment
 commentPair =
-  keyValue '=' (stringNot "=\n\t") (M.option [] stringWSpaces)
+  keyValue "=" (stringNot "=\n\t") (M.option "" stringWSpaces)
 
-listPair :: Char -> Parser a -> Parser b -> Parser [(a, b)]
-listPair sep p q = M.sepBy1 (keyValue sep p q) (char '|')
+listPair :: String -> Parser a -> Parser b -> Parser [(a, b)]
+listPair sep p q = keyValue sep p q `M.sepBy1` symbol "|"
 
 stringNot :: String -> Parser String
--- [ ] second litSpaces in symbol is redundant
-stringNot s = symbol . M.some $ satisfy (\c -> not $ c `elem` s)
+stringNot s = lexeme . M.some $ satisfy (\c -> c `notElem` s)
 
 stringWSpaces :: Parser String
 stringWSpaces = stringNot "\t\n"
@@ -146,23 +145,41 @@ stringWOSpaces = stringNot " \t\n"
 
 ---
 -- parser combinators
-keyValue :: Char -> Parser a -> Parser b -> Parser (a, b)
-keyValue sep p q = do key   <- p
-                      M.optional $ char sep
-                      value <- q
-                      return (key, value)
-
-symbol :: Parser a -> Parser a
-symbol p = litSpaces *> p <* litSpaces
+keyValue :: String -> Parser a -> Parser b -> Parser (a, b)
+keyValue sep p q = do
+  key <- p
+  M.optional $ symbol sep
+  value <- q
+  return (key, value)
 
 maybeEmpty :: Parser a -> Parser (Maybe a)
+-- for parsers that won't parse "_"
 maybeEmpty p = emptyField M.<|> liftM Just p
+
+orEmpty :: Parser String -> Parser (Maybe String)
+-- for parsers that may parse "_"
+orEmpty p = do
+  r <- p
+  case r of
+    "_" -> return Nothing
+    _   -> return $ Just r
 
 listP :: Parser [a] -> Parser [a]
 -- using a parser that returns a possibly empty list like sepBy and
 -- many will return the correct result for the empty filed ('_'), but
 -- will report it the same as any other syntax error
 listP p = liftM (fromMaybe []) $ maybeEmpty p
+
+---
+-- lexing
+symbol :: String -> Parser String
+symbol = L.symbol ws
+
+lexeme :: Parser a -> Parser a
+lexeme = L.lexeme ws
+
+ws :: Parser ()
+ws = void $ M.takeWhileP (Just "space") (== ' ')
 
 ---
 -- customizable parser
