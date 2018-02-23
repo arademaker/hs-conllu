@@ -77,7 +77,7 @@ recTks tt tks =
        (\tks' xs ->
           let res =
                 fmap length .
-                recLex tt . L.inits . map (fromJust . _form) $
+                recLex tt . L.inits . map (fromMaybe "" . _form) $
                 tks'
           in if isJust res
                then take (fromJust res) tks' : xs
