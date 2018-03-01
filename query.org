@@ -1,0 +1,50 @@
+#+TITLE: Query documentation
+
+following examples in [[http://talc2.loria.fr/grew/#][grew]] and [[http://bionlp.utu.fi/searchexpressions-new.html][turku]] and translating them to the
+syntax I'd like to have.
+
+- Search for a given value in a field:
+  #+BEGIN_SRC lisp
+    (query
+     (T (form joão)))
+  #+END_SRC
+
+- Search for a dependency relation:
+  #+BEGIN_SRC lisp
+    (query (DEP (deprel appos))
+           (GOV (-> DEP))) ; no restrictions on GOV
+  #+END_SRC
+
+- Search for a "det" dependency relation such that the governor
+  category is different from NOUN, PROPN and ADJ.
+  #+BEGIN_SRC lisp
+  (query
+   (DEP (deprel det))
+   (GOV (-> DEP
+            (not
+             (or (deprel noun)
+                 (deprel propn)
+                 (deprel adj))))
+  #+END_SRC
+
+- a verb whithout a direct object:
+  #+BEGIN_SRC lisp
+    (query (V (-> DEP (pos verb))) ; search for V that governs DEP and has
+                                   ; a VERB postag
+           (DEP (not (deprel obj))))
+  #+END_SRC
+
+- a verb that:
+  - has no subject
+  - is not of the =Inf= or =Part= forms
+  - is not dependent as =cop=, =aux=, =conj=
+  #+BEGIN_SRC lisp
+    (query (V (-> S (and (pos verb)
+                         (not (or (feats form=Inf)
+                                  (feats form=Part)
+                                  (deprel cop)
+                                  (deprel aux)
+                                  (deprel conj))))))
+           (S (not (or (deprel nsubj)
+                       (deprel csubj)))))
+  #+END_SRC
