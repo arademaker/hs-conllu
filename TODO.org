@@ -7,6 +7,8 @@
 
 - Type:
   - should I remove Maybe's where I can ([] as Nothing)?
+  - should I have most fields such as POS as strings (validated
+    strings, of course)?
   - should have one data declaration for each kind of token? --
     apparently not
   - make functions safer on token type

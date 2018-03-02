@@ -48,3 +48,37 @@ syntax I'd like to have.
            (S (not (or (deprel nsubj)
                        (deprel csubj)))))
   #+END_SRC
+
+- coordination of unlikes:
+  #+BEGIN_SRC lisp
+    (query (N1 (-> N2))
+           N2
+           (/ ; this means a condition on the elements of the relation,
+              ; but should be improved
+            (/= (postag N1) (postag N2))))
+  #+END_SRC
+
+- search for:
+  - empty nodes:
+    #+BEGIN_SRC lisp
+      (query (N empty))
+    #+END_SRC
+  - multiword nodes:
+    #+BEGIN_SRC lisp
+      (query (N multi)) ; should return component nodes too?
+    #+END_SRC
+
+- enhanced dependencies:
+  #+BEGIN_SRC lisp
+    ;; not sure at all about this, specially because I haven't studied
+    ;; them in the wild
+    (query (N (and (deprel appos)
+                   (deps flat))))
+  #+END_SRC
+
+- search for bigrams:
+  #+BEGIN_SRC lisp
+    (query (N1 (form computador))
+           (N2 (form de))
+           (> N1 N2)) ; N2 follows N1, i.e. (= (id N1) (1+ (id N2)))
+  #+END_SRC
