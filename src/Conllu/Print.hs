@@ -15,18 +15,20 @@ newtype DiffList a = DiffList { getDiffList :: [a] -> [a] }
 
 instance Monoid (DiffList a) where
   mempty = DiffList (\xs -> [] ++ xs)
-  (DiffList f) `mappend` (DiffList g) = DiffList (f . g) 
+  (DiffList f) `mappend` (DiffList g) = DiffList (f . g)
 
-toDiffList :: [a] -> DiffList a  
-toDiffList xs = DiffList (xs++)  
-  
-fromDiffList :: DiffList a -> [a]  
+toDiffList :: [a] -> DiffList a
+toDiffList xs = DiffList (xs++)
+
+fromDiffList :: DiffList a -> [a]
 fromDiffList (DiffList f) = f []
 
 ---
 -- printing
 printDoc :: Document -> String
-printDoc = fromDiffList . mconcat . map printSent . _sents
+printDoc d =
+  fromDiffList . mconcat $
+  map (\s -> printSent s `mappend` diffLSpace) $ _sents d
 
 printSent :: Sentence -> DiffList Char
 printSent ss =
@@ -34,7 +36,6 @@ printSent ss =
     [ printComments (_meta ss)
     , diffLSpace
     , printTks (_tokens ss)
-    , diffLSpace
     ]
 
 printComments :: [Comment] -> DiffList Char
