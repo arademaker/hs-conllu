@@ -54,11 +54,8 @@ readConllu = readConlluWith document
 writeConlluFile :: FilePath -> Document -> IO ()
 writeConlluFile fp = writeFile fp . printDoc
 
----
--- main
-main :: IO ()
-main = do
-  fps <- getArgs
-  ds <- mapM readConlluFile fps
-  mapM_ (putStr . printDoc) ds
+-- print
+readAndPrintConllu :: [FilePath] -> IO ()
+readAndPrintConllu fps = do
+  ds <- mapM_ (\fp -> readConlluFile fp >>= putStr . printDoc) fps
   return ()
