@@ -1,3 +1,4 @@
+{-# LANGUAGE ApplicativeDo #-}
 module Conllu.Parse where
 
 {--
@@ -14,7 +15,7 @@ module Conllu.Parse where
 -- imports
 
 import           Conllu.Type
-
+import           Control.Applicative
 import           Control.Monad
 import           Data.Char
 import           Data.List
@@ -79,11 +80,13 @@ emptyField = symbol "_" *> return Nothing M.<?> "empty field"
 
 index :: Parser Index
 index = do
-  ix <- M.some digitChar M.<?> "ID"
-  return (read ix :: Index)
+  ix <- (M.try (DecimalIndex <$> do a <- M.some digitChar; d <- char '.'; b <- M.some digitChar; return (read (a ++ [d] ++ b)))) <|>
+        (M.try (uncurry RangeIndex <$> ((,) <$> (read <$> M.some digitChar) <*> (char '>' *> (read <$> M.some digitChar))))) <|>
+        (IntIndex <$> (read <$> M.some digitChar))
+  return ix
 
 indexSep :: Parser IxSep
-indexSep = liftM head (symbol "-" M.<|> symbol "." M.<?> "meta separator")
+indexSep = fmap head (symbol "-" M.<|> symbol "." M.<?> "meta separator")
 
 form :: Parser Form
 form = orEmpty stringWSpaces M.<?> "FORM"
@@ -95,7 +98,7 @@ upostag :: Parser PosTag
 upostag = maybeEmpty upostag' M.<?> "UPOSTAG"
   where
     upostag' :: Parser Pos
-    upostag' = liftM mkPos stringWOSpaces
+    upostag' = fmap mkPos stringWOSpaces
 
 xpostag :: Parser Xpostag
 xpostag = maybeEmpty stringWOSpaces M.<?> "XPOSTAG"
@@ -111,13 +114,13 @@ deprel = maybeEmpty deprel'
 
 deprel' :: Parser (Dep, Subtype)
 deprel' = do
-  dep <- lexeme dep M.<?> "DEPREL"
+  dep' <- lexeme dep M.<?> "DEPREL"
   st <- M.option [] $ symbol ":" *> (letters M.<?> "DEPREL subtype")
-  return (dep, st)
+  return (dep', st)
   where
-    letters = lexeme $ M.some letterChar
+    letters = lexeme $ M.some (letterChar <|> char '.')
     dep :: Parser Dep
-    dep = liftM mkDep letters
+    dep = fmap mkDep letters
 
 deps :: Parser Deps
 deps = listP (listPair ":" index deprel' M.<?> "DEPS pair")
@@ -135,7 +138,7 @@ listPair :: String -> Parser a -> Parser b -> Parser [(a, b)]
 listPair sep p q = keyValue sep p q `M.sepBy1` symbol "|"
 
 stringNot :: String -> Parser String
-stringNot s = lexeme . M.some $ satisfy (\c -> c `notElem` s)
+stringNot s = lexeme . M.some $ satisfy (`notElem` s)
 
 stringWSpaces :: Parser String
 stringWSpaces = stringNot "\t\n"
@@ -154,7 +157,7 @@ keyValue sep p q = do
 
 maybeEmpty :: Parser a -> Parser (Maybe a)
 -- for parsers that won't parse "_"
-maybeEmpty p = emptyField M.<|> liftM Just p
+maybeEmpty p = emptyField M.<|> fmap Just p
 
 orEmpty :: Parser String -> Parser (Maybe String)
 -- for parsers that may parse "_"
@@ -168,7 +171,7 @@ listP :: Parser [a] -> Parser [a]
 -- using a parser that returns a possibly empty list like sepBy and
 -- many will return the correct result for the empty filed ('_'), but
 -- will report it the same as any other syntax error
-listP p = liftM (fromMaybe []) $ maybeEmpty p
+listP p = fromMaybe [] <$> maybeEmpty p
 
 ---
 -- lexing

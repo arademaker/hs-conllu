@@ -69,7 +69,7 @@ sentId :: Sentence -> Index
 sentId s =
   let mid = lookup "sent_id " $ _meta s
       id = fromMaybe "0" mid
-  in read id :: Index
+  in IntIndex (read id) :: Index
 
 ---
 -- main
