@@ -5,7 +5,8 @@ import Conllu.Utils
 
 import Data.List
 import Data.Maybe
-import Data.Monoid
+import Data.Semigroup
+import Data.Monoid (Monoid(mempty, mappend))
 
 -- TODO: use some kind of bi-directional thing to derive this module
 
@@ -13,9 +14,12 @@ import Data.Monoid
 -- DiffList type from LYHGG
 newtype DiffList a = DiffList { getDiffList :: [a] -> [a] }
 
+instance Semigroup (DiffList a) where
+  (DiffList f) <> (DiffList g) = DiffList (f . g)
+
 instance Monoid (DiffList a) where
   mempty = DiffList (\xs -> [] ++ xs)
-  (DiffList f) `mappend` (DiffList g) = DiffList (f . g)
+  a `mappend` b = a <> b
 
 toDiffList :: [a] -> DiffList a
 toDiffList xs = DiffList (xs++)
