@@ -11,6 +11,7 @@ import Data.List
 import Data.Maybe
 import Data.Ord
 import Data.Tree
+import Data.Decimal
 
 ---
 -- type and data declarations
@@ -58,7 +59,10 @@ data Token
            }
   deriving (Eq, Show)
 
-type Index   = Int
+data Index   = IntIndex Int
+             | DecimalIndex Decimal
+             | RangeIndex Int Int
+             deriving (Eq, Show, Ord)
 type IxSep   = Char
 type Form    = Maybe String
 type Lemma   = Maybe String
