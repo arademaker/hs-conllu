@@ -11,7 +11,6 @@ import Data.List
 import Data.Maybe
 import Data.Ord
 import Data.Tree
-import Data.Decimal
 
 ---
 -- type and data declarations
@@ -29,7 +28,7 @@ type Comment    = StringPair
 type StringPair = (String, String)
 
 data Token
-  = SToken { _ix      :: Index
+  = SToken { _ix      :: TkIndex
            , _form    :: Form
            , _lemma   :: Lemma
            , _upostag :: PosTag
@@ -40,14 +39,12 @@ data Token
            , _deps    :: Deps
            , _misc    :: Misc
            }
-  | MToken { _ix    :: Index
-           , _end   :: Index
+  | MToken { _ix    :: TkIndex
            , _form  :: Form
            , _misc  :: Misc
            -- other values should be empty
            }
-  | EToken { _ix       :: Index
-           , _childIx  :: Index
+  | EToken { _ix       :: TkIndex
            , _form     :: Form
            , _lemma    :: Lemma
            , _upostag  :: PosTag
@@ -59,20 +56,24 @@ data Token
            }
   deriving (Eq, Show)
 
-data Index   = IntIndex Int
-             | DecimalIndex Decimal
-             | RangeIndex Int Int
-             deriving (Eq, Show, Ord)
+type Index = Int
+data TkIndex
+  = SId Index -- ^ Simple token ID is an integer
+  | MId Index
+        Index -- ^ multi-word token ID is a range
+  | EId Index
+        Index -- ^ empty token ID is a decimal
+  deriving (Eq, Show, Ord)
 type IxSep   = Char
 type Form    = Maybe String
 type Lemma   = Maybe String
 type PosTag  = Maybe Pos
 type Xpostag = Maybe String
 type Feats   = [StringPair]
-type Dephead = Maybe Index
+type Dephead = Maybe TkIndex
 type DepRel  = Maybe (Dep,Subtype)
 type Subtype = String
-type Deps    = [(Index,(Dep,Subtype))]
+type Deps    = [(TkIndex,(Dep,Subtype))]
 type Misc    = Maybe String
 
 _dep :: Token -> Maybe Dep
@@ -164,15 +165,15 @@ mkPos = mkPos' . upcaseStr
     mkPos' pos = read pos
 
 -- tokens
-mkToken :: Index -> Maybe IxSep -> Maybe Index -> Form -> Lemma
+mkToken :: TkIndex -> Form -> Lemma
   ->  PosTag -> Xpostag -> Feats -> Dephead -> DepRel -> Deps
   -> Misc -> Token
-mkToken i sep ci = case sep of
-  Nothing  -> mkSTk i
-  Just '-' -> mkMTk i (fromJust ci)
-  Just '.' -> mkETk i (fromJust ci)
+mkToken ix = case ix of
+  SId _   -> mkSTk ix
+  MId _ _ -> mkMTk ix
+  EId _ _ -> mkETk ix
 
-mkSTk :: Index -> Form -> Lemma -> PosTag -> Xpostag
+mkSTk :: TkIndex -> Form -> Lemma -> PosTag -> Xpostag
   -> Feats -> Dephead -> DepRel -> Deps -> Misc -> Token
 mkSTk i fo l up xp fe h dr d m =
   SToken { _ix      = i
@@ -187,20 +188,19 @@ mkSTk i fo l up xp fe h dr d m =
          , _misc    = m
          }
 
-mkMTk :: Index ->  Index -> Form -> Lemma -> PosTag -> Xpostag
+mkMTk :: TkIndex -> Form -> Lemma -> PosTag -> Xpostag
   -> Feats -> Dephead -> DepRel -> Deps -> Misc -> Token
-mkMTk s e fo l up xp fe h dr d m =
+mkMTk s fo l up xp fe h dr d m =
   assert
     (mTkOK fo l up xp fe h dr d)
-    MToken {_ix = s, _end = e, _form = fo, _misc = m}
+    MToken {_ix = s, _form = fo, _misc = m}
 
-mkETk :: Index ->  Index -> Form -> Lemma -> PosTag -> Xpostag
+mkETk :: TkIndex -> Form -> Lemma -> PosTag -> Xpostag
   -> Feats -> Dephead -> DepRel -> Deps -> Misc -> Token
-mkETk i ci fo l up xp fe h dr d m =
+mkETk i fo l up xp fe h dr d m =
   assert (eTkOK h dr d)
   EToken
   { _ix      = i
-  , _childIx = ci
   , _form    = fo
   , _lemma   = l
   , _upostag = up
@@ -242,7 +242,7 @@ actOnSentTks f s@Sentence{_tokens=tks} = s{_tokens=f tks}
 
 actOnDocTks :: ([Token] -> [Token]) -> Document -> Document
 actOnDocTks f d@Document {_sents = ss} =
-  d {_sents = map (actOnSentTks f) ss}  
+  d {_sents = map (actOnSentTks f) ss}
 
 sentTksByType :: Sentence -> ([Token],[Token])
 -- ([SToken],[metaTokens:EToken,MToken])

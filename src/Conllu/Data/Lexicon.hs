@@ -113,7 +113,7 @@ correctLex
 correctLex _as _fi _fh [] = []
 correctLex as fi fh (t:tt) =
   let mi = L.lookup (_ix t) as
-      mh = L.lookup (fromMaybe (IntIndex 0) . _dephead $ t) as
+      mh = L.lookup (fromMaybe (SId 0) . _dephead $ t) as
       correctRest = correctLex as fi fh tt
   in case (mi, mh) of
        (Nothing, Nothing) -> t : correctRest

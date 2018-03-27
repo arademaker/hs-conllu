@@ -66,7 +66,7 @@ printTk t = printTk' t
     printTk' t
       | isSToken t =
         tkLine
-          [ printIx
+          [ printTkIx
           , printForm
           , printLemma
           , printPostag
@@ -79,7 +79,7 @@ printTk t = printTk' t
           ]
       | isMTk t =
         tkLine
-          [ printMetaIx "-" (show . _end)
+          [ printTkIx
           , printForm
           , emptyF
           , emptyF
@@ -92,7 +92,7 @@ printTk t = printTk' t
           ]
       | otherwise =
         tkLine
-          [ printMetaIx "." (show . _childIx)
+          [ printTkIx
           , printForm
           , printLemma
           , printPostag
@@ -104,8 +104,10 @@ printTk t = printTk' t
           , printMisc
           ]
     printMStr = fromMaybe "_"
-    printIx = show . _ix
-    printMetaIx d p t = concat [printIx t, d, p t]
+    printTkIx tk = case _ix tk of
+      SId ix -> show $ ix
+      MId s e -> concat [show s, "-", show e]
+      EId ix e -> concat [show ix, ".", show e]
     printForm = printMStr . _form
     printLemma = printMStr . _lemma
     printPostag = printPos . _upostag

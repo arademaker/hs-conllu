@@ -65,11 +65,11 @@ showM :: Show a => Maybe a -> String
 showM (Just x) = show x
 showM Nothing  = "_"
 
-sentId :: Sentence -> Index
+sentId :: Sentence -> Int
 sentId s =
   let mid = lookup "sent_id " $ _meta s
       id = fromMaybe "0" mid
-  in IntIndex (read id) :: Index
+  in (read id) :: Index
 
 ---
 -- main
