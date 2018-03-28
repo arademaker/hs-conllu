@@ -5,9 +5,6 @@ description:         utilities to parse, print, and analyse data in CoNLL-U form
 extra-doc-files:      README.org
                     , CHANGELOG.md
                     , TODO.org
-source-repository head
-  type:               git
-  location:           https://github.com/odanoburu/hs-conllu.git
 homepage:            https://github.com/odanoburu/hs-conllu
 bug-reports:         https://github.com/odanoburu/hs-conllu/issues
 license:             LGPL-3
@@ -18,6 +15,10 @@ category:            Language
 build-type:          Simple
 cabal-version:       >=1.10
 tested-with:          GHC==8.0.2, GHC==8.2.2, GHC==8.4.1
+
+source-repository head
+  type:              git
+  location:          https://github.com/odanoburu/hs-conllu.git
 
 library
   exposed-modules:     Conllu.Type,
