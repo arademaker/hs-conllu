@@ -1,13 +1,12 @@
 name:                hs-conllu
 version:             0.0.1
 synopsis:            Conllu validating parser and utils.
--- description:
+description:         utilities to parse, print, and analyse data in CoNLL-U format.
 homepage:            https://github.com/odanoburu/hs-conllu
 license:             LGPL-3
 license-file:        LICENSE
 author:              bruno cuconato
 maintainer:          bcclaro+hsconllu@gmail.com
--- copyright:
 category:            Language
 build-type:          Simple
 extra-source-files:  ChangeLog.md
