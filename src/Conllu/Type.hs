@@ -256,5 +256,9 @@ isMTk :: Token -> Bool
 isMTk MToken{} = True
 isMTk _tk      = False
 
+sTkIx :: Token -> Index
+-- this should be safe
+sTkIx SToken{_ix =(SId ix)} = ix
+
 sentSTks :: Sentence -> [Token]
 sentSTks = fst . sentTksByType

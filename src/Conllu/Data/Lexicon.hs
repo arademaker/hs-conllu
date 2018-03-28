@@ -95,7 +95,7 @@ recLex tt =
 
 ---
 -- correcting
-correctTkHead :: Index -> Token -> Token
+correctTkHead :: TkIndex -> Token -> Token
 correctTkHead hi t@SToken{} = t {_dephead = Just hi}
 correctToken _hi t = t
 
@@ -105,9 +105,9 @@ correctTkDep t@SToken {_deprel = Just (dep, _)} =
 correctTkDep t = t
 
 correctLex
-  :: [(Index, Index)]
-  -> (Index -> Token -> Token) -- correct by ID (inside name)
-  -> (Index -> Token -> Token) -- correct by HEAD (pointing to name)
+  :: [(TkIndex, TkIndex)]
+  -> (TkIndex -> Token -> Token) -- correct by ID (inside name)
+  -> (TkIndex -> Token -> Token) -- correct by HEAD (pointing to name)
   -> [Token]
   -> [Token]
 correctLex _as _fi _fh [] = []
@@ -120,7 +120,7 @@ correctLex as fi fh (t:tt) =
        (Nothing, Just h) -> fh h t : correctRest
        (Just i, _) -> fi i t : correctRest
 
-mkCorrectAssoc :: [[Token]] -> [(Index, Index)]
+mkCorrectAssoc :: [[Token]] -> [(TkIndex, TkIndex)]
 mkCorrectAssoc =
   L.nubBy (\p1 p2 -> fst p1 == fst p2) . -- rm tks recognized in more
                                          -- than one name
