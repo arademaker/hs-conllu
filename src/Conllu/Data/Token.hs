@@ -15,7 +15,7 @@ import Data.Tree
 _depU :: Token -> Dep
 _depU = mkU _dep
 
-_depheadU :: Token -> Index
+_depheadU :: Token -> TkIndex
 _depheadU = mkU _dephead
 
 -- relations
@@ -25,10 +25,10 @@ getRel p = getRel3 p
        rmIxSubTree (_ix t) $ getIxSubTree (fromJust $ _dephead t) tr)
     (\tr t -> getIxSubTree (_ix t) tr) -- get dependent subtree
 
-getIxSubTree :: Index -> TTree -> TTree
+getIxSubTree :: TkIndex -> TTree -> TTree
 getIxSubTree i tt = head $ getSubTreesBy (\t -> i == _ix t) tt
 
-rmIxSubTree :: Index -> TTree -> TTree
+rmIxSubTree :: TkIndex -> TTree -> TTree
 rmIxSubTree i tt = fromJust $ rmSubTreesBy (\t -> i == _ix t) tt
 
 getDepSubTrees :: Dep -> TTree -> [TTree]

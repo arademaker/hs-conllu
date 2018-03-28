@@ -21,12 +21,12 @@ sTksToTTree ts =
       dm = tksDepMap ts
   in rootToTTree rt dm
   where
-    rootToTTree :: Token -> M.Map Index [Token] -> TTree
+    rootToTTree :: Token -> M.Map TkIndex [Token] -> TTree
     rootToTTree t m =
       Node t $
       map (`rootToTTree` m) $ fromMaybe [] $ M.lookup (_ix t) m
 
-tksDepMap :: [Token] -> M.Map Index [Token]
+tksDepMap :: [Token] -> M.Map TkIndex [Token]
 -- Map parent_ix [children_tks]
 tksDepMap = foldr mkDepMap M.empty
   where
