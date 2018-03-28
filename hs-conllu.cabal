@@ -2,15 +2,22 @@ name:                hs-conllu
 version:             0.0.1
 synopsis:            Conllu validating parser and utils.
 description:         utilities to parse, print, and analyse data in CoNLL-U format.
+extra-doc-files:      README.org
+                    , CHANGELOG.md
+                    , TODO.org
+source-repository head
+  type:               git
+  location:           https://github.com/odanoburu/hs-conllu.git
 homepage:            https://github.com/odanoburu/hs-conllu
+bug-reports:         https://github.com/odanoburu/hs-conllu/issues
 license:             LGPL-3
 license-file:        LICENSE
 author:              bruno cuconato
-maintainer:          bcclaro+hsconllu@gmail.com
+maintainer:          bruno cuconato <bcclaro+hsconllu@gmail.com>
 category:            Language
 build-type:          Simple
-extra-source-files:  ChangeLog.md
 cabal-version:       >=1.10
+tested-with:          GHC==8.0.2, GHC==8.2.2, GHC==8.4.1
 
 library
   exposed-modules:     Conllu.Type,
