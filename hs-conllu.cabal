@@ -3,7 +3,7 @@ version:             0.0.1
 synopsis:            Conllu validating parser and utils.
 description:         utilities to parse, print, and analyse data in CoNLL-U format.
 extra-doc-files:      README.org
-                    , CHANGELOG.md
+                    , CHANGELOG.org
                     , TODO.org
 homepage:            https://github.com/odanoburu/hs-conllu
 bug-reports:         https://github.com/odanoburu/hs-conllu/issues
