@@ -1,4 +1,18 @@
-module Conllu.Print where
+-- |
+-- Module      :  Conllu.Print
+-- Copyright   :  © 2018 bruno cuconato
+-- License     :  LPGL-3
+--
+-- Maintainer  :  bruno cuconato <bcclaro+hackage@gmail.com>
+-- Stability   :  experimental
+-- Portability :  non-portable
+--
+-- prints CoNLL-U.
+
+module Conllu.Print
+  ( printDoc
+  , printSent )
+where
 
 import Conllu.Type
 import Conllu.Utils
@@ -10,8 +24,7 @@ import Data.Monoid (Monoid(mempty, mappend))
 
 -- TODO: use some kind of bi-directional thing to derive this module
 
----
--- DiffList type from LYHGG
+-- | DiffList type from LYHGG
 newtype DiffList a = DiffList { getDiffList :: [a] -> [a] }
 
 instance Semigroup (DiffList a) where
@@ -30,6 +43,7 @@ fromDiffList (DiffList f) = f []
 ---
 -- printing
 printDoc :: Document -> String
+-- | prints Document to a string.
 printDoc d =
   fromDiffList . mconcat $
   map (\s -> printSent s `mappend` diffLSpace) $ _sents d

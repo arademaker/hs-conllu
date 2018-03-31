@@ -1,3 +1,15 @@
+-- |
+-- Module      :  Conllu.Parse
+-- Copyright   :  © 2018 bruno cuconato
+-- License     :  LPGL-3
+--
+-- Maintainer  :  bruno cuconato <bcclaro+hackage@gmail.com>
+-- Stability   :  experimental
+-- Portability :  non-portable
+--
+-- defines types for handling CoNLL-U data.
+
+
 module Conllu.Type where
 
 ---
@@ -15,29 +27,30 @@ import Data.Tree
 ---
 -- type and data declarations
 data Document = Document
-  { _file      :: String
-  , _sents     :: [Sentence]
+  { _file      :: String -- ^ original filename for document.
+  , _sents     :: [Sentence] -- ^ sentences in CoNLL-U file.
   } deriving (Eq,Show)
 
 data Sentence = Sentence
-  { _meta :: [Comment]
-  , _tokens :: [Token]
+  { _meta :: [Comment] -- ^ the sentence's comments.
+  , _tokens :: [Token] -- ^ the sentence's tokens.
   } deriving (Eq, Show)
 
+-- | most comments are (key, value) pairs
 type Comment    = StringPair
 type StringPair = (String, String)
 
 data Token
-  = SToken { _ix      :: TkIndex
-           , _form    :: Form
-           , _lemma   :: Lemma
-           , _upostag :: PosTag
-           , _xpostag :: Xpostag
-           , _feats   :: Feats
-           , _dephead :: Dephead
-           , _deprel  :: DepRel
-           , _deps    :: Deps
-           , _misc    :: Misc
+  = SToken { _ix      :: TkIndex -- ^ ID field
+           , _form    :: Form -- ^ FORM field
+           , _lemma   :: Lemma -- ^ LEMMA field
+           , _upostag :: PosTag -- ^ UPOS field
+           , _xpostag :: Xpostag -- ^ XPOS field
+           , _feats   :: Feats -- ^ FEATS field
+           , _dephead :: Dephead -- ^ HEAD field
+           , _deprel  :: DepRel -- ^ DEPREL field
+           , _deps    :: Deps -- ^ DEPS field
+           , _misc    :: Misc -- ^ MISC field
            }
   | MToken { _ix    :: TkIndex
            , _form  :: Form
@@ -56,7 +69,7 @@ data Token
            }
   deriving (Eq, Show)
 
-type Index = Int
+
 data TkIndex
   = SId Index -- ^ Simple token ID is an integer
   | MId Index
@@ -64,12 +77,14 @@ data TkIndex
   | EId Index
         Index -- ^ empty token ID is a decimal
   deriving (Eq, Show, Ord)
+
+type Index = Int
 type IxSep   = Char
 type Form    = Maybe String
 type Lemma   = Maybe String
 type PosTag  = Maybe Pos
 type Xpostag = Maybe String
-type Feats   = [StringPair]
+type Feats   = [StringPair] -- ^ features come in (key, value) pairs
 type Dephead = Maybe TkIndex
 type DepRel  = Maybe (Dep,Subtype)
 type Subtype = String
@@ -77,6 +92,7 @@ type Deps    = [(TkIndex,(Dep,Subtype))]
 type Misc    = Maybe String
 
 _dep :: Token -> Maybe Dep
+-- | get DEPREL main value, if it exists.
 _dep = dep . _deprel
   where
     dep (Just (dr,_)) = Just dr
@@ -228,6 +244,7 @@ eTkOK h dr d =
 ---
 -- utility functions
 tkOrd :: Token -> Token -> Ordering
+-- | an ordering for tokens.
 tkOrd t1 t2 =
   let c = (compare `on` _ix) t1 t2
   in case c of

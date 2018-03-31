@@ -1,15 +1,51 @@
-{-# LANGUAGE ApplicativeDo #-}
-module Conllu.Parse where
+-- |
+-- Module      :  Conllu.Parse
+-- Copyright   :  © 2018 bruno cuconato
+-- License     :  LPGL-3
+--
+-- Maintainer  :  bruno cuconato <bcclaro+hackage@gmail.com>
+-- Stability   :  experimental
+-- Portability :  non-portable
+--
+-- Parsers for CoNLL-U format.  the CoNLL-U format is based in the
+-- deprecated CoNLL format (defined
+-- [here](https://web.archive.org/web/20161105025307/http://ilk.uvt.nl/conll/))
+-- and is defined [here](http://universaldependencies.org/format.html)
 
-{--
-
- CoNLL-U parsed file reader.  CoNLL format is defined here:
- https://web.archive.org/web/20161105025307/http://ilk.uvt.nl/conll/
- CoNLL-U/UD format is defined here:
- http://universaldependencies.org/format.html
- http://universaldependencies.org/v2/conll-u.html
-
---}
+module Conllu.Parse
+  ( Parser
+    -- * default parsers
+  , document
+  , sentence
+  , comment
+  , token
+  -- * customizable parsers
+  , ParserC(ParserC)
+  , parserC
+  -- * CoNLL-U field parsers
+  , emptyField
+  , tkIndex
+  , form
+  , lemma
+  , upostag
+  , xpostag
+  , feats
+  , dephead
+  , deprel
+  , deps
+  , misc
+    -- * utility parsers
+  , commentPair
+  , listPair
+  , stringNot
+  , stringWOSpaces
+  , stringWSpaces
+    -- * parser combinators
+  , keyValue
+  , maybeEmpty
+  , orEmpty
+  , listP )
+where
 
 ---
 -- imports
@@ -33,27 +69,34 @@ type Parser = M.Parsec Void String
 ---
 -- conllu parsers
 document :: Parser [Sentence]
+-- | the default document parser.
 document = documentC sentence
 
 documentC :: Parser Sentence -> Parser [Sentence]
+-- | the customizable document parser.
 documentC s = ws *> s `M.endBy1` blankLine <* M.eof
 
 blankLine :: Parser ()
+-- | parse a blank line.
 blankLine = lexeme . void $ newline -- spaces shouldn't exist, but no
                                     -- problem being lax here
 
 sentence :: Parser Sentence
+-- | the default sentence parser.
 sentence = sentenceC comment token
 
 sentenceC :: Parser Comment -> Parser Token -> Parser Sentence
+-- | the customizable sentence parser.
 sentenceC c t = liftM2 Sentence (M.many c) (M.some t)
 
 comment :: Parser Comment
+-- | parse a comment.
 comment = do
   symbol "#" M.<?> "comment starter"
   commentPair <* newline M.<?> "comment content"
 
 token :: Parser Token
+-- | the default token parser.
 token = tokenC tkIndex form lemma upostag xpostag feats
   dephead deprel deps misc
 
@@ -61,6 +104,7 @@ tokenC :: Parser TkIndex -> Parser Form -> Parser Lemma
   -> Parser PosTag -> Parser Xpostag -> Parser Feats
   -> Parser Dephead -> Parser DepRel -> Parser Deps -> Parser Misc
   -> Parser Token
+-- | the customizable token parser.
 tokenC ix fo l up xp fe dh dr ds m =
   mkToken <$>
   ix <* tab
@@ -75,9 +119,12 @@ tokenC ix fo l up xp fe dh dr ds m =
   <*> m <* newline
 
 emptyField :: Parser (Maybe a)
+-- | parse an empty field.
 emptyField = symbol "_" *> return Nothing M.<?> "empty field"
 
 tkIndex :: Parser TkIndex
+-- | parse the ID field, which might be an integer, a range, or a
+-- decimal.
 tkIndex = do
   ix <- index
   mix <- M.optional metaIndex M.<?> "meta token ID"
@@ -101,30 +148,40 @@ tkIndex = do
       return (sep, ix)
 
 form :: Parser Form
+-- | parse the FORM field.
 form = orEmpty stringWSpaces M.<?> "FORM"
 
 lemma :: Parser Lemma
+-- | parse the LEMMA field.
 lemma = orEmpty stringWSpaces M.<?> "LEMMA"
 
 upostag :: Parser PosTag
+-- | parse the UPOS field.
 upostag = maybeEmpty upostag' M.<?> "UPOSTAG"
   where
     upostag' :: Parser Pos
     upostag' = fmap mkPos stringWOSpaces
 
 xpostag :: Parser Xpostag
+-- | parse the XPOS field.
 xpostag = maybeEmpty stringWOSpaces M.<?> "XPOSTAG"
 
 feats :: Parser Feats
-feats = listP (listPair "=" (stringNot "=") (stringNot "\t|") M.<?> "feature pair") M.<?> "FEATS"
+-- | parse the FEATS field.
+feats = listP (listPair "=" (stringNot "=") (stringNot "\t|")
+               M.<?> "feature pair")
+        M.<?> "FEATS"
 
 dephead :: Parser Dephead
+-- | parse the HEAD field.
 dephead = maybeEmpty tkIndex M.<?> "HEAD"
 
 deprel :: Parser DepRel
+-- | parse the DEPREL field.
 deprel = maybeEmpty deprel'
 
 deprel' :: Parser (Dep, Subtype)
+-- | parse a non-empty DEPREL field.
 deprel' = do
   dep' <- lexeme dep M.<?> "DEPREL"
   st <- M.option [] $ symbol ":" *> (letters M.<?> "DEPREL subtype")
@@ -135,44 +192,66 @@ deprel' = do
     dep = fmap mkDep letters
 
 deps :: Parser Deps
+-- | parse the DEPS field.
 deps = listP (listPair ":" tkIndex deprel' M.<?> "DEPS pair")
 
 misc :: Parser Misc
+-- | parse the MISC field.
 misc = orEmpty stringWSpaces M.<?> "MISC"
 
 ---
 -- utility parsers
 commentPair :: Parser Comment
+-- | parse a comment pair.
 commentPair =
   keyValue "=" (stringNot "=\n\t") (M.option "" stringWSpaces)
 
 listPair :: String -> Parser a -> Parser b -> Parser [(a, b)]
+-- | parse a list of pairs.
 listPair sep p q = keyValue sep p q `M.sepBy1` symbol "|"
 
 stringNot :: String -> Parser String
+-- | parse any chars except the ones provided.
 stringNot s = lexeme . M.some $ satisfy (`notElem` s)
 
-stringWSpaces :: Parser String
-stringWSpaces = stringNot "\t\n"
-
 stringWOSpaces :: Parser String
+-- | parse a string until a space, a tab, or a newline.
 stringWOSpaces = stringNot " \t\n"
+
+stringWSpaces :: Parser String
+-- | parse a string until a tab or a newline.
+stringWSpaces = stringNot "\t\n"
 
 ---
 -- parser combinators
 keyValue :: String -> Parser a -> Parser b -> Parser (a, b)
+-- | parse a (key, value) pair.
 keyValue sep p q = do
   key <- p
   M.optional $ symbol sep
   value <- q
   return (key, value)
 
+
+-- | two combinators are needed for parsing the empty field (without
+-- lookahead). this has to do with the fact that if we do
+--
+-- > form <|> emptyField
+--
+-- we would parse "_" as a non-empty FORM field. but if we did
+--
+-- > emptyField <|> form
+--
+-- we would parse "_" in "_something" and then the parser would choke
+-- expecting a tab.
+
 maybeEmpty :: Parser a -> Parser (Maybe a)
--- for parsers that won't parse "_"
+-- | a parser combinator for parsers that won't parse "_" (e.g., as
+-- 'lemma' would).
 maybeEmpty p = emptyField M.<|> fmap Just p
 
 orEmpty :: Parser String -> Parser (Maybe String)
--- for parsers that may parse "_"
+-- | a parser combinator for parsers that may parse "_".
 orEmpty p = do
   r <- p
   case r of
@@ -180,9 +259,10 @@ orEmpty p = do
     _   -> return $ Just r
 
 listP :: Parser [a] -> Parser [a]
--- using a parser that returns a possibly empty list like sepBy and
--- many will return the correct result for the empty filed ('_'), but
--- will report it the same as any other syntax error
+-- | parse a list of values that may be an empty field. using a parser
+-- that returns a possibly empty list like 'sepBy' and many will
+-- return the correct result for the empty field ('_'), but will
+-- report it the same as any other syntax error.
 listP p = fromMaybe [] <$> maybeEmpty p
 
 ---
@@ -227,8 +307,12 @@ customC = ParserC
   , _miscP    = misc
   }
 
-parseC :: ParserC -> Parser [Sentence]
-parseC p =
+parserC :: ParserC -> Parser [Sentence]
+-- | defines a custom parser of sentences. if you only need to
+-- customize one parser (e.g., to parse special comments or a special
+-- MISC field), you can do:
+-- > parserC ParserC{_commentP = myCommentsParser }
+parserC p =
   let i  = _indexP p
       fo = _formP p
       l  = _lemmaP p

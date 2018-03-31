@@ -54,7 +54,7 @@
    are parsed, you may write a parser for that field and then
    customize your the standard parser with the =parseC= function and
    the =customC= record (defined in the parse module), using the
-   overriding technique described [[https://web.archive.org/web/*/http://neilmitchell.blogspot.com.br/2008/04/optional-parameters-in-haskell.html][here]]. you then use the =read*With=
+   overriding technique described [[https://web.archive.org/web/20180210115730/http://neilmitchell.blogspot.com.br/2008/04/optional-parameters-in-haskell.html][here]]. you then use the =read*With=
    functions in the reader module, providing your customized parser.
 
    I didn't make the parser as customizable as it could be, so if that
@@ -107,7 +107,7 @@
     this will write corrected files to the =output-dir= (if you
     specify the same directory as the files are in, they will be
     overwritten -- don't do that).
-
+ 
 * contributing
   I'm a new haskeller, so any help will probably be useful -- even if
   its just a few pointers and comments on how I can improve the
