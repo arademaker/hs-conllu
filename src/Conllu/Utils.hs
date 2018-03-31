@@ -1,3 +1,14 @@
+-- |
+-- Module      :  Conllu.Utils
+-- Copyright   :  © 2018 bruno cuconato
+-- License     :  LPGL-3
+--
+-- Maintainer  :  bruno cuconato <bcclaro+hackage@gmail.com>
+-- Stability   :  experimental
+-- Portability :  non-portable
+--
+-- the library's utility functions.
+
 module Conllu.Utils where
 
 import Control.Exception.Base
@@ -30,35 +41,8 @@ if' True  x  _b = x
 if' False _b y  = y
 
 (?:) :: Maybe a -> [a] -> [a]
+-- | cons value if it is a Just, else do Nothing.
 ma ?: as =
   case ma of
     (Just a) -> a : as
     Nothing  -> as
-
-zipWithNoid :: Monoid c => (a -> b -> c) -> [a] -> [b] -> c
-zipWithNoid _f []     _bs    = mempty
-zipWithNoid _f _as    []     = mempty
-zipWithNoid f  (a:at) (b:bt) = f a b `mappend` zipWithNoid f at bt
-
-filterMap :: (a -> Bool) -> (a -> b) -> [a] -> [b]
-filterMap _p _f [] = []
-filterMap p f (x:xt) =
-  if p x
-    then f x : filterMap p f xt
-    else filterMap p f xt
-
-deleteWith :: (a -> Bool) -> [a] -> [a]
-deleteWith _p [] = []
-deleteWith p (a:at) =
-  if p a
-    then at
-    else a : deleteWith p at
-
-filterF :: Foldable f => (a -> Bool) -> f a -> [a]
-filterF p = foldMap (\a -> [a | p a])
-
-equal :: Eq a => a -> a -> Bool
-equal = (==)
-
-applyWithLabel :: (a -> b) -> (c, a) -> (c, b)
-applyWithLabel f (l, x) = (l, f x)
