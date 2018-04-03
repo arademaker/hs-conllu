@@ -9,8 +9,7 @@
 --
 -- defines types for handling CoNLL-U data.
 
-{-#LANGUAGE GADTs #-}
-{-#LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE EmptyDataDecls #-}
 
 module Conllu.Type where
 
@@ -29,20 +28,22 @@ import Data.Tree
 ---
 -- type and data declarations
 data Sentence = Sentence
-  { _meta :: [Comment] -- ^ the sentence's comments.
-  , _tokens :: [CWord] -- ^ the sentence's tokens.
+  { _meta    :: [Comment]  -- ^ the sentence's comments.
+  , _words   :: [CWord SW] -- ^ the sentence's simple words.
+  , _mtokens :: [CWord MT] -- ^ the sentence's multi-word tokens.
+  , _enodes  :: [CWord EN] -- ^ the sentence's empty nodes.
   } deriving (Eq, Show)
 
 -- | most comments are (key, value) pairs.
 type Comment    = StringPair
 type StringPair = (String, String)
 
--- | CoNLL-U word, representing a word line in a CoNLL-U file. note
--- that we have collapsed some fields together: HEAD and DEPREL have
--- been looped in with DEPS, as their representation is the same; this
--- way, the head of the _deps field is the usual (HEAD, DEPREL) pair,
--- and its tail is the DEPS field found in the CoNLL-U file.
-data CWord = CWord
+-- | represents a word line in a CoNLL-U file. note that we have
+-- collapsed some fields together: HEAD and DEPREL have been looped in
+-- with DEPS, as their representation is the same; this way, the head
+-- of the _deps field is the usual (HEAD, DEPREL) pair, and its tail
+-- is the DEPS field found in the CoNLL-U file.
+data CWord a = CWord
   { _ix      :: ID    -- ^ ID field
   , _form    :: FORM  -- ^ FORM field
   , _lemma   :: LEMMA -- ^ LEMMA field
@@ -54,11 +55,12 @@ data CWord = CWord
   } deriving (Eq, Show)
 -- [] make Ord instance after manual ID instance
 
--- only has ID, FORM, MISC
+data SW -- | simple word
 -- | multiword token representation. do note that in MWTs only the ID,
 -- FORM and MISC fields may be non-empty.
-newtype MToken = MTk CWord
-newtype ENode = Etk CWord
+data MT
+data EN -- | empty node
+
 
 data ID
   = SId Index -- ^ word ID is an integer
@@ -79,7 +81,7 @@ type MISC  = Maybe String
 
 -- | dependency relation representation.
 data Rel = Rel
-  { _head :: ID             -- ^ head ID
+  { _head   :: ID           -- ^ head ID
   , _deprel :: Dep          -- ^ dependency relation type
   , _subdep :: Maybe String -- ^ dependency relation subtype
   } deriving (Eq, Show)
@@ -87,11 +89,11 @@ data Rel = Rel
 type Index   = Int
 type IxSep   = Char
 
-_dep :: CWord -> Maybe Dep
+_dep :: CWord SW -> Maybe Dep
 -- | get DEPREL main value, if it exists.
 _dep w = Just . _deprel =<< safehead (_deps w)
 
-depIs :: Dep -> CWord -> Bool
+depIs :: Dep -> CWord SW -> Bool
 depIs d = maybe False (\d' -> d == d') . _dep
 
 data Dep
@@ -155,10 +157,10 @@ data Pos
   deriving (Eq, Read, Show)
 
 -- trees
-type TTree  = Tree CWord
+type TTree  = Tree (CWord SW)
 -- data Tree a = Node a [Tree a]
 
-type ETree = (TTree, [CWord]) -- enhanced tree
+type ETree = (TTree, [CWord SW]) -- enhanced tree
 
 ---
 -- constructor functions
@@ -172,17 +174,17 @@ mkPos = mkPos' . upcaseStr
     mkPos' "DET" = DETpos
     mkPos' "PUNCT" = PUNCTpos
     mkPos' pos = read pos
-{--
+
 -- tokens
-mkWord :: ID -> FORM -> LEMMA -> UPOS -> XPOS -> FEATS
-  -> (ID, (Dep, Maybe String)) -> MISC -> CWord
+mkWord :: ID -> FORM -> LEMMA -> UPOS -> XPOS -> FEATS -> DEPS -> MISC
+  -> CWord a
 mkWord ix = case ix of
   SId _   -> mkSTk ix
   MId _ _ -> mkMTk ix
   EId _ _ -> mkETk ix
 
-mkSTk :: TkIndex -> Form -> Lemma -> PosTag -> Xpostag
-  -> Feats -> Dephead -> DepRel -> Deps -> Misc -> Token
+mkSTk :: ID -> FORM -> LEMMA -> UPOS -> XPOS
+  -> FEATS -> DEPS -> MISC -> CWord SW
 mkSTk i fo l up xp fe h dr d m =
   SToken { _ix      = i
          , _form    = fo
