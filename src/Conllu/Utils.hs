@@ -46,3 +46,9 @@ ma ?: as =
   case ma of
     (Just a) -> a : as
     Nothing  -> as
+
+---
+-- safe functions
+safehead :: [a] -> Maybe a
+safehead [] = Nothing
+safehead (x:_) = Just x

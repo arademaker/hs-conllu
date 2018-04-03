@@ -56,9 +56,9 @@ import           Control.Monad
 import           Data.Char
 import           Data.List
 import           Data.Maybe
+import           Data.Void
 import           System.Environment
 import           System.IO
-import           Data.Void
 
 import qualified Text.Megaparsec as M
 import           Text.Megaparsec.Char
@@ -85,7 +85,7 @@ sentence :: Parser Sentence
 -- | the default sentence parser.
 sentence = sentenceC comment token
 
-sentenceC :: Parser Comment -> Parser Token -> Parser Sentence
+sentenceC :: Parser Comment -> Parser CWord -> Parser Sentence
 -- | the customizable sentence parser.
 sentenceC c t = liftM2 Sentence (M.many c) (M.some t)
 
@@ -95,37 +95,46 @@ comment = do
   symbol "#" M.<?> "comment starter"
   commentPair <* newline M.<?> "comment content"
 
-token :: Parser Token
+word :: Parser CWord
 -- | the default token parser.
-token = tokenC tkIndex form lemma upostag xpostag feats
-  dephead deprel deps misc
+word =
+  tokenC idW form lemma upostag xpostag feats dephead deprel deps misc
 
-tokenC :: Parser TkIndex -> Parser Form -> Parser Lemma
-  -> Parser PosTag -> Parser Xpostag -> Parser Feats
-  -> Parser Dephead -> Parser DepRel -> Parser Deps -> Parser Misc
-  -> Parser Token
+tokenC ::
+     Parser ID
+  -> Parser FORM
+  -> Parser LEMMA
+  -> Parser UPOS
+  -> Parser XPOS
+  -> Parser FEATS
+  -> Parser ID
+  -> Parser (Dep, Maybe String)
+  -> Parser DEPS
+  -> Parser MISC
+  -> Parser CWord
 -- | the customizable token parser.
-tokenC ix fo l up xp fe dh dr ds m =
-  mkToken <$>
-  ix <* tab
-  <*> fo <* tab
-  <*> l  <* tab
-  <*> up <* tab
-  <*> xp <* tab
-  <*> fe <* tab
-  <*> dh <* tab
-  <*> dr <* tab
-  <*> ds <* tab
-  <*> m <* newline
+tokenC ixp fop lp upp xpp fep dhp drp dsp mp = do
+  i   <- ixp <* tab
+  fo  <- fop <* tab
+  l   <- lp  <* tab
+  up  <- upp <* tab
+  xp  <- xpp <* tab
+  fe  <- fep <* tab
+  dh  <- dhp <* tab
+  dr  <- drp <* tab
+  dst <- dsp <* tab
+  m   <- mp  <* newline
+  let ds = (dh, dr) : dst
+  return $ mkWord i fo l up xp fe ds m
 
 emptyField :: Parser (Maybe a)
 -- | parse an empty field.
 emptyField = symbol "_" *> return Nothing M.<?> "empty field"
 
-tkIndex :: Parser TkIndex
+idW :: Parser ID
 -- | parse the ID field, which might be an integer, a range, or a
 -- decimal.
-tkIndex = do
+idW = do
   ix <- index
   mix <- M.optional metaIndex M.<?> "meta token ID"
   return $
@@ -147,40 +156,40 @@ tkIndex = do
       ix <- index
       return (sep, ix)
 
-form :: Parser Form
+form :: Parser FORM
 -- | parse the FORM field.
 form = orEmpty stringWSpaces M.<?> "FORM"
 
-lemma :: Parser Lemma
+lemma :: Parser LEMMA
 -- | parse the LEMMA field.
 lemma = orEmpty stringWSpaces M.<?> "LEMMA"
 
-upostag :: Parser PosTag
+upos :: Parser UPOS
 -- | parse the UPOS field.
-upostag = maybeEmpty upostag' M.<?> "UPOSTAG"
+upos = maybeEmpty upos' M.<?> "UPOS"
   where
-    upostag' :: Parser Pos
-    upostag' = fmap mkPos stringWOSpaces
+    upos' :: Parser Pos
+    upos' = fmap mkPos stringWOSpaces
 
-xpostag :: Parser Xpostag
+xpos :: Parser XPOS
 -- | parse the XPOS field.
-xpostag = maybeEmpty stringWOSpaces M.<?> "XPOSTAG"
+xpos = maybeEmpty stringWOSpaces M.<?> "XPOS"
 
-feats :: Parser Feats
+feats :: Parser FEATS
 -- | parse the FEATS field.
 feats = listP (listPair "=" (stringNot "=") (stringNot "\t|")
                M.<?> "feature pair")
         M.<?> "FEATS"
 
-dephead :: Parser Dephead
+dephead :: Parser ID
 -- | parse the HEAD field.
-dephead = maybeEmpty tkIndex M.<?> "HEAD"
+dephead = maybeEmpty idW M.<?> "HEAD"
 
-deprel :: Parser DepRel
+deprel :: Parser (Dep, Maybe String)
 -- | parse the DEPREL field.
 deprel = maybeEmpty deprel'
 
-deprel' :: Parser (Dep, Subtype)
+deprel' :: Parser (Dep, Maybe String)
 -- | parse a non-empty DEPREL field.
 deprel' = do
   dep' <- lexeme dep M.<?> "DEPREL"
@@ -191,11 +200,11 @@ deprel' = do
     dep :: Parser Dep
     dep = fmap mkDep letters
 
-deps :: Parser Deps
+deps :: Parser DEPS
 -- | parse the DEPS field.
-deps = listP (listPair ":" tkIndex deprel' M.<?> "DEPS pair")
+deps = listP (listPair ":" idW deprel' M.<?> "DEPS")
 
-misc :: Parser Misc
+misc :: Parser MISC
 -- | parse the MISC field.
 misc = orEmpty stringWSpaces M.<?> "MISC"
 
