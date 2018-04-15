@@ -29,27 +29,24 @@ import qualified Text.Megaparsec as M
 
 ---
 -- ** readers using a customized parser
--- | these reader functions will read files using a customized parser
--- built with 'ParserC' and 'parserC'.
-readConlluFileWith :: Parser [Sentence] -> FilePath -> IO Document
+-- | these reader functions will read files using a customized
+-- parser. you can build one with 'ParserC' and 'parserC'.
+readConlluFileWith :: Parser Doc -> FilePath -> IO Doc
 -- | reads a file with a customized parser.
 readConlluFileWith p f = do
   d <- readFile f
-  let r = M.parse p f d
-  case r of
-    Left err -> do
-      putStr . M.parseErrorPretty $ err
-      return $ Document f []
-    Right ss -> return $ Document (takeFileName f) ss
+  case parseConlluWith p f d of
+    Left err -> putStr err *> return []
+    Right d -> return d
 
-readDirectoryWith :: Parser [Sentence] -> FilePath -> IO [Document]
+readDirectoryWith :: Parser Doc -> FilePath -> IO [Doc]
 -- | reads all the files in a directory as CoNLL-U files with a
 -- customized parser.
 readDirectoryWith p d = do fs' <- listDirectory d
                            let fs = map (d </>) fs'
                            mapM (readConlluFileWith p) fs
 
-readConlluWith :: Parser [Sentence] -> FilePath -> IO [Document]
+readConlluWith :: Parser Doc -> FilePath -> IO [Doc]
 -- | reads a file or a directory as CoNLL-U files with a customized
 -- parser.
 readConlluWith p fp = do f <- doesFileExist fp
@@ -59,24 +56,25 @@ readConlluWith p fp = do f <- doesFileExist fp
 
 ---
 -- ** readers using default parsers
-readConlluFile :: FilePath -> IO Document
+readConlluFile :: FilePath -> IO Doc
 -- | reads a CoNLL-U file.
 readConlluFile = readConlluFileWith document
 
-readDirectory :: FilePath -> IO [Document]
+readDirectory :: FilePath -> IO [Doc]
 -- | reads all files in a directory as CoNLL-U files.
 readDirectory = readDirectoryWith document
 
-readConllu :: FilePath -> IO [Document]
+readConllu :: FilePath -> IO [Doc]
 -- | reads a file or a directory as CoNLL-U files.
 readConllu = readConlluWith document
 
 ---
 -- * write
-writeConlluFile :: FilePath -> Document -> IO ()
+writeConlluFile :: FilePath -> Doc -> IO ()
 -- | writes a CoNLL-U file to disk.
 writeConlluFile fp = writeFile fp . printDoc
 
+---
 -- * print
 readAndPrintConllu :: FilePath -> IO ()
 -- | reads and prints the CoNLL-U files given.
