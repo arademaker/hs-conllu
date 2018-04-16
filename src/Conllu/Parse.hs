@@ -360,7 +360,7 @@ parseConlluWith
   -> Either String Doc
 -- | parse a CoNLL-U document using a customized parser.
 parseConlluWith p fp s =
-  case (M.parse p fp s) of
+  case M.parse p fp s of
     Left err -> Left $ M.parseErrorPretty err
     Right d -> Right d
 

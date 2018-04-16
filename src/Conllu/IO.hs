@@ -13,15 +13,16 @@ module Conllu.IO where
 
 ---
 -- imports
-import Conllu.Type
-import Conllu.Utils
-import Conllu.Parse
-import Conllu.Print
+import           Conllu.Type
+import           Conllu.Utils
+import           Conllu.Parse
+import           Conllu.Print
+import           Conllu.Diff
 
-import System.Directory
-import System.Environment
-import System.FilePath
-import System.IO
+import           System.Directory
+import           System.Environment
+import           System.FilePath
+import           System.IO
 import qualified Text.Megaparsec as M
 
 
@@ -80,4 +81,15 @@ readAndPrintConllu :: FilePath -> IO ()
 -- | reads and prints the CoNLL-U files given.
 readAndPrintConllu fp = do
   readConlluFile fp >>= putStr . printDoc
+  return ()
+
+---
+-- * diff
+diffConllu :: FilePath -> FilePath -> IO ()
+-- | reads two CoNLL-U files and prints their diffs. this assumes
+-- their sentences are paired.
+diffConllu fp1 fp2 = do
+  ss1 <- readConlluFile fp1
+  ss2 <- readConlluFile fp2
+  print . diffSs $ zip ss1 ss2
   return ()

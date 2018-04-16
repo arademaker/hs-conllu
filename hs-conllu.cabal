@@ -26,7 +26,7 @@ library
                        Conllu.DeprelTagset,
                        Conllu.IO,
                        Conllu.Parse,
---                       Conllu.Diff,
+                       Conllu.Diff,
                        Conllu.Utils,
                        Conllu.Print
 --  other-modules: Conllu.Utils
@@ -52,6 +52,7 @@ executable hs-conllu
   other-modules:      Conllu.Type,
                       Conllu.UposTagset,
                       Conllu.DeprelTagset,
+                      Conllu.Diff,
                       Conllu.IO,
                       Conllu.Parse,
                       Conllu.Utils,
