@@ -1,5 +1,5 @@
 -- |
--- Module      :  Conllu.Tyoe
+-- Module      :  Conllu.Type
 -- Copyright   :  © 2018 bruno cuconato
 -- License     :  LPGL-3
 --
