@@ -13,17 +13,14 @@ module Conllu.IO where
 
 ---
 -- imports
-import           Conllu.Type
-import           Conllu.Utils
-import           Conllu.Parse
-import           Conllu.Print
-import           Conllu.Diff
+import Conllu.Type
+import Conllu.Utils
+import Conllu.Parse
+import Conllu.Print
+import Conllu.Diff
 
-import           System.Directory
-import           System.Environment
-import           System.FilePath
-import           System.IO
-import qualified Text.Megaparsec as M
+import System.Directory
+import System.FilePath
 
 
 -- * read functions
@@ -35,8 +32,8 @@ import qualified Text.Megaparsec as M
 readConlluFileWith :: Parser Doc -> FilePath -> IO Doc
 -- | reads a file with a customized parser.
 readConlluFileWith p f = do
-  d <- readFile f
-  case parseConlluWith p f d of
+  ds <- readFile f
+  case parseConlluWith p f ds of
     Left err -> putStr err *> return []
     Right d -> return d
 

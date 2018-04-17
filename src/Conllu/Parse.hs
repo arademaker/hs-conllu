@@ -57,12 +57,8 @@ import qualified Conllu.UposTagset as U
 
 import           Control.Applicative
 import           Control.Monad
-import           Data.Char
-import           Data.List
 import           Data.Maybe
 import           Data.Void
-import           System.Environment
-import           System.IO
 
 import qualified Text.Megaparsec as M
 import           Text.Megaparsec.Char
@@ -100,9 +96,9 @@ sentenceC c t = liftM2 Sent (M.many c) (M.some t)
 
 comment :: Parser Comment
 -- | parse a comment.
-comment = do
-  symbol "#" M.<?> "comment starter"
-  commentPair <* newline M.<?> "comment content"
+comment =
+  (symbol "#" M.<?> "comment starter") *> commentPair <*
+  newline M.<?> "comment content"
 
 word :: Parser (CW AW)
 -- | the default word parser.
@@ -249,8 +245,8 @@ stringWSpaces = stringNot "\t\n"
 keyValue :: String -> Parser a -> Parser b -> Parser (a, b)
 -- | parse a (key, value) pair.
 keyValue sep p q = do
-  key <- p
-  M.optional $ symbol sep
+  key   <- p
+  _     <- M.optional $ symbol sep
   value <- q
   return (key, value)
 

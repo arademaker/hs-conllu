@@ -15,17 +15,11 @@ module Conllu.Type where
 
 ---
 -- imports
-import Conllu.Utils
+import           Conllu.Utils
 import qualified Conllu.UposTagset as U
 import qualified Conllu.DeprelTagset as D
 
-import Control.Exception.Base
-import Data.Char
-import Data.Function
-import Data.List
-import Data.Maybe
-import Data.Ord
-import Data.Tree
+import           Data.Ord
 
 ---
 -- * type and data declarations
@@ -110,7 +104,7 @@ instance Ord ID where
           sameIx (SID _) _id = GT
           sameIx _id (SID _) = LT
           -- reverse ID order so that MID 1 4 comes before MID 1 2:
-          sameIx id1 id2 = comparing sndIx id2 id1
+          sameIx i1 i2 = comparing sndIx i2 i1
 
 type FORM  = Maybe String
 type LEMMA = Maybe String
@@ -161,16 +155,16 @@ mkAW = CW
 
 mkSW :: CW AW -> CW SW
 -- | coerce a word to a simple word.
-mkSW w@CW { _id = i
-             , _form = f
-             , _lemma = l
-             , _upos = u
-             , _xpos = x
-             , _feats = fs
-             , _rel = r
-             , _deps = ds
-             , _misc = m
-             } = CW i f l u x fs r ds m
+mkSW CW { _id = i
+        , _form = f
+        , _lemma = l
+        , _upos = u
+        , _xpos = x
+        , _feats = fs
+        , _rel = r
+        , _deps = ds
+        , _misc = m
+        } = CW i f l u x fs r ds m
 
 {-- saved for a future validation module
 ---
