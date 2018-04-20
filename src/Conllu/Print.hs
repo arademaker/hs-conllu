@@ -134,7 +134,8 @@ printFEATS =
          else "=" ++ v)
 
 printDEPREL :: D.EP -> Maybe String -> String
-printDEPREL dr sdr = show dr ++ maybe "" (\sdr -> ":" ++ show sdr) sdr
+printDEPREL dr sdr =
+  downcaseStr $ show dr ++ maybe "" (":" ++) sdr
 
 printDEPS :: DEPS -> String
 printDEPS =
