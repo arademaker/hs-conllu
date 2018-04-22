@@ -88,5 +88,5 @@ diffConllu :: FilePath -> FilePath -> IO ()
 diffConllu fp1 fp2 = do
   ss1 <- readConlluFile fp1
   ss2 <- readConlluFile fp2
-  print . diffSs $ zip ss1 ss2
+  print . printDDiff . diffSs $ pairSents ss1 ss2
   return ()

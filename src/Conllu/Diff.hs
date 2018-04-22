@@ -20,7 +20,6 @@
 module Conllu.Diff where
 
 import Conllu.Type
-import Conllu.Utils
 
 import Data.Maybe
 import Data.Ord
@@ -75,12 +74,12 @@ pairSentsBy f ss1@(s1:st1) ss2@(s2:st2) =
     GT -> pairSentsBy f ss1 st2
     EQ -> (s1, s2) : pairSentsBy f st1 st2
 
-sentId :: Sent -> Index
+sentId :: Sent -> String
 -- | try to find an index in a sentence's metadata.
 sentId s =
-  let mid = lookup "sent_id " $ _meta s
-      id = fromMaybe "0" mid
-  in read id :: Index
+  let mi = lookup "sent_id " $ _meta s
+      i = fromMaybe "_" mi
+  in i
 
 pairSents :: [Sent] -> [Sent] -> [(Sent, Sent)]
 -- | pair sentences by their sent_id, found in their metadata.
@@ -92,9 +91,9 @@ printFieldDiffs :: WDiff a -> [Maybe StringPair]
 -- | list of maybe differing fields in a pair of words.
 printFieldDiffs (w1, w2) = fmap (diffField w1 w2) pfs
   where
-    diffField w1 w2 pf =
-      let pf1 = pf w1
-          pf2 = pf w2
+    diffField w w' pf =
+      let pf1 = pf w
+          pf2 = pf w'
       in if pf1 /= pf2
            then Just (pf1, pf2)
            else Nothing
