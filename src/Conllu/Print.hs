@@ -16,7 +16,6 @@ where
 
 import qualified Conllu.DeprelTagset as D
 import           Conllu.Type
-import qualified Conllu.UposTagset as U
 import           Conllu.Utils
 
 import           Data.List

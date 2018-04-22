@@ -52,3 +52,6 @@ consIf p a as =
 safehead :: [a] -> Maybe a
 safehead [] = Nothing
 safehead (x:_) = Just x
+
+safeRead :: Read a => String -> Maybe a
+safeRead = fmap fst . listToMaybe . reads

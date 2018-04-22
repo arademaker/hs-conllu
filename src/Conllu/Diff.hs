@@ -20,6 +20,7 @@
 module Conllu.Diff where
 
 import Conllu.Type
+import Conllu.Utils
 
 import Data.Maybe
 import Data.Ord
@@ -74,12 +75,13 @@ pairSentsBy f ss1@(s1:st1) ss2@(s2:st2) =
     GT -> pairSentsBy f ss1 st2
     EQ -> (s1, s2) : pairSentsBy f st1 st2
 
-sentId :: Sent -> String
--- | try to find an index in a sentence's metadata.
+sentId :: Sent -> Maybe Index
+-- | try to find an index in a sentence's metadata looking for
+-- 'sent_id = n'.
 sentId s =
   let mi = lookup "sent_id " $ _meta s
-      i = fromMaybe "_" mi
-  in i
+      i = fromMaybe "0" mi
+  in safeRead i :: Maybe Index
 
 pairSents :: [Sent] -> [Sent] -> [(Sent, Sent)]
 -- | pair sentences by their sent_id, found in their metadata.

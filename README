@@ -47,7 +47,9 @@ a separate package.
    it currently has two subcommands:
    - validate :: read and pretty-print the file given as argument.
    - diff :: diff the two CoNLL-U files provided as arguments, and
-             print them.
+             print them. this assumes changes have only been made to
+             word fields, not to sentence ordering, etc. if you'd like
+             finer grained diffing, you will have to use the library.
 
 ** Reading CoNLL-U files
    the reading functions are in the =IO= module.
