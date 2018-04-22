@@ -21,7 +21,7 @@ module Conllu.Parse
   , ParserC(ParserC)
   , parserC
   -- * default parsers
-  , document
+  , rawSents
   , sentence
   , comment
   , word
@@ -57,28 +57,37 @@ import qualified Conllu.UposTagset as U
 
 import           Control.Applicative
 import           Control.Monad
+import           Data.Either
 import           Data.Maybe
 import           Data.Void
 
-import qualified Text.Megaparsec as M
+import           Text.Megaparsec
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
 
--- | Parser type synonim
-type Parser = M.Parsec Void String
+-- | Parser type synonym
+type Parser = Parsec Void String
+
+-- | Parser raw output
+type RawData t e = [Either (ParseError t e) Sent]
 
 -- | DEPREL field type synonim
 type DEPREL = Maybe (D.EP, Maybe String)
 
+
 ---
 -- conllu parsers
-document :: Parser Doc
--- | the default document parser.
-document = documentC sentence
+rawSents :: Parser (RawData Char Void)
+-- | parse CoNLL-U sentences with recovery.
+rawSents = rawSentsC sentence
 
-documentC :: Parser Sent -> Parser Doc
--- | the customizable document parser.
-documentC s = ws *> s `M.endBy1` blankLine <* M.eof
+rawSentsC :: Parser Sent -> Parser (RawData Char Void)
+-- | parse CoNLL-U sentences with recovery, using a custom parser.
+rawSentsC sent = between ws eof (e `endBy1` blankLine)
+  where
+    e = withRecovery recover (Right <$> sent)
+    recover err =
+      Left err <$ skipManyTill anyChar blankLine
 
 blankLine :: Parser ()
 -- | parse a blank line.
@@ -92,13 +101,13 @@ sentence = sentenceC comment word
 sentenceC :: Parser Comment -> Parser (CW AW)
   -> Parser Sent
 -- | the customizable sentence parser.
-sentenceC c t = liftM2 Sent (M.many c) (M.some t)
+sentenceC c t = liftM2 Sent (many c) (some t)
 
 comment :: Parser Comment
 -- | parse a comment.
 comment =
-  (symbol "#" M.<?> "comment starter") *> commentPair <*
-  newline M.<?> "comment content"
+  (symbol "#" <?> "comment starter") *> commentPair <*
+  newline <?> "comment content"
 
 word :: Parser (CW AW)
 -- | the default word parser.
@@ -130,7 +139,7 @@ wordC ixp fop lp upp xpp fsp drp dsp mp = do
   mm <- mp <* newline
   return $ mkAW i mf ml mup mxp mfs (rel mdh mdr) ds mm
   where
-    dhp = maybeEmpty ixp M.<?> "HEAD"
+    dhp = maybeEmpty ixp <?> "HEAD"
     rel :: Maybe ID -> DEPREL -> Maybe Rel
     rel mdh mdr = do
       dh <- mdh
@@ -139,14 +148,14 @@ wordC ixp fop lp upp xpp fsp drp dsp mp = do
 
 emptyField :: Parser (Maybe a)
 -- | parse an empty field.
-emptyField = symbol "_" *> return Nothing M.<?> "empty field"
+emptyField = symbol "_" *> return Nothing <?> "empty field"
 
 idW :: Parser ID
 -- | parse the ID field, which might be an integer, a range, or a
 -- decimal.
 idW = do
   ix <- index
-  mix <- M.optional metaIndex M.<?> "meta token ID"
+  mix <- optional metaIndex <?> "meta token ID"
   return $
     case mix of
       Nothing         -> SID ix
@@ -155,11 +164,11 @@ idW = do
   where
     index :: Parser Index
     index = do
-      ix <- M.some digitChar M.<?> "ID"
+      ix <- some digitChar <?> "ID"
       return (read ix :: Int)
     indexSep :: Parser IxSep
     indexSep =
-      fmap head (symbol "-" M.<|> symbol "." M.<?> "meta separator")
+      fmap head (symbol "-" <|> symbol "." <?> "meta separator")
     metaIndex :: Parser (IxSep, Index)
     metaIndex = do
       sep <- indexSep
@@ -168,28 +177,28 @@ idW = do
 
 form :: Parser FORM
 -- | parse the FORM field.
-form = orEmpty stringWSpaces M.<?> "FORM"
+form = orEmpty stringWSpaces <?> "FORM"
 
 lemma :: Parser LEMMA
 -- | parse the LEMMA field.
-lemma = orEmpty stringWSpaces M.<?> "LEMMA"
+lemma = orEmpty stringWSpaces <?> "LEMMA"
 
 upos :: Parser UPOS
 -- | parse the UPOS field.
-upos = maybeEmpty upos' M.<?> "UPOS"
+upos = maybeEmpty upos' <?> "UPOS"
   where
     upos' :: Parser U.POS
     upos' = fmap mkUPOS stringWOSpaces
 
 xpos :: Parser XPOS
 -- | parse the XPOS field.
-xpos = maybeEmpty stringWOSpaces M.<?> "XPOS"
+xpos = maybeEmpty stringWOSpaces <?> "XPOS"
 
 feats :: Parser FEATS
 -- | parse the FEATS field.
 feats = listP (listPair "=" (stringNot "=") (stringNot "\t|")
-               M.<?> "feature pair")
-        M.<?> "FEATS"
+               <?> "feature pair")
+        <?> "FEATS"
 
 deprel :: Parser DEPREL
 -- | parse the DEPREL field.
@@ -200,37 +209,37 @@ deprel' :: Parser (D.EP, Maybe String)
 deprel' = liftM2 (,) dep subdeprel
   where
     dep :: Parser D.EP
-    dep = fmap mkDEP (lexeme letters M.<?> "DEPREL")
+    dep = fmap mkDEP (lexeme letters <?> "DEPREL")
     subdeprel :: Parser (Maybe String)
-    subdeprel = optional (symbol ":" *> letters M.<?> "DEPREL subtype")
-    letters = lexeme $ M.some (letterChar <|> char '.')
+    subdeprel = optional (symbol ":" *> letters <?> "DEPREL subtype")
+    letters = lexeme $ some (letterChar <|> char '.')
 
 deps :: Parser DEPS
 -- | parse the DEPS field.
 deps = listP rels
   where
     rels = fmap (map mkRel) deps'
-    deps' = listPair ":" idW deprel' M.<?> "DEPS"
+    deps' = listPair ":" idW deprel' <?> "DEPS"
     mkRel (dh, (dr, sdr)) = Rel dh dr sdr
 
 misc :: Parser MISC
 -- | parse the MISC field.
-misc = orEmpty stringWSpaces M.<?> "MISC"
+misc = orEmpty stringWSpaces <?> "MISC"
 
 ---
 -- utility parsers
 commentPair :: Parser Comment
 -- | parse a comment pair.
 commentPair =
-  keyValue "=" (stringNot "=\n\t") (M.option "" stringWSpaces)
+  keyValue "=" (stringNot "=\n\t") (option "" stringWSpaces)
 
 listPair :: String -> Parser a -> Parser b -> Parser [(a, b)]
 -- | parse a list of pairs.
-listPair sep p q = keyValue sep p q `M.sepBy1` symbol "|"
+listPair sep p q = keyValue sep p q `sepBy1` symbol "|"
 
 stringNot :: String -> Parser String
 -- | parse any chars except the ones provided.
-stringNot s = lexeme . M.some $ satisfy (`notElem` s)
+stringNot s = lexeme . some $ satisfy (`notElem` s)
 
 stringWOSpaces :: Parser String
 -- | parse a string until a space, a tab, or a newline.
@@ -246,7 +255,7 @@ keyValue :: String -> Parser a -> Parser b -> Parser (a, b)
 -- | parse a (key, value) pair.
 keyValue sep p q = do
   key   <- p
-  _     <- M.optional $ symbol sep
+  _     <- optional $ symbol sep
   value <- q
   return (key, value)
 
@@ -266,7 +275,7 @@ keyValue sep p q = do
 maybeEmpty :: Parser a -> Parser (Maybe a)
 -- | a parser combinator for parsers that won't parse "_" (e.g., as
 -- 'lemma' would).
-maybeEmpty p = emptyField M.<|> fmap Just p
+maybeEmpty p = emptyField <|> fmap Just p
 
 orEmpty :: Parser String -> Parser (Maybe String)
 -- | a parser combinator for parsers that may parse "_".
@@ -292,7 +301,7 @@ lexeme :: Parser a -> Parser a
 lexeme = L.lexeme ws
 
 ws :: Parser ()
-ws = void $ M.takeWhileP (Just "space") (== ' ')
+ws = void $ takeWhileP (Just "space") (== ' ')
 
 ---
 -- customizable parser
@@ -323,7 +332,7 @@ customC = ParserC
   , _miscP    = misc
   }
 
-parserC :: ParserC -> Parser Doc
+parserC :: ParserC -> Parser Sent
 -- | defines a custom parser of sentences. if you only need to
 -- customize one field parser (e.g., to parse special comments or a
 -- special MISC field), you can do:
@@ -344,22 +353,28 @@ parserC p =
       c  = _commentP p
       w  = wordC i f l up xp fs dr ds m
       s  = sentenceC c w
-  in documentC s
+  in s
 
 ---
 -- parse
 parseConlluWith
-  :: Parser Doc -- ^ the document parser.
-  -> FilePath   -- ^ the source whose stream is being supplied in the
-                -- next argument (may be "" for no file)
-  -> String     -- ^ stream to be parsed
+  :: Parser Sent -- ^ the sentence parser to be used.
+  -> FilePath    -- ^ the source whose stream is being supplied in the
+                 -- next argument (may be "" for no file)
+  -> String      -- ^ stream to be parsed
   -> Either String Doc
 -- | parse a CoNLL-U document using a customized parser.
 parseConlluWith p fp s =
-  case M.parse p fp s of
-    Left err -> Left $ M.parseErrorPretty err
-    Right d -> Right d
+  case parse doc fp s of
+    Left err -> Left $ parseErrorPretty err
+    Right d ->
+      let (ls, rs) = partitionEithers d
+      in if null ls
+           then Right rs
+           else Left $ concatMap parseErrorPretty ls
+  where
+    doc = rawSentsC p
 
 parseConllu :: FilePath -> String -> Either String Doc
 -- | parse a CoNLL-U document using the default parser.
-parseConllu = parseConlluWith document
+parseConllu = parseConlluWith sentence

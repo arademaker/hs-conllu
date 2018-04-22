@@ -29,7 +29,7 @@ import System.FilePath
 -- ** readers using a customized parser
 -- | these reader functions will read files using a customized
 -- parser. you can build one with 'ParserC' and 'parserC'.
-readConlluFileWith :: Parser Doc -> FilePath -> IO Doc
+readConlluFileWith :: Parser Sent -> FilePath -> IO Doc
 -- | reads a file with a customized parser.
 readConlluFileWith p f = do
   ds <- readFile f
@@ -37,14 +37,14 @@ readConlluFileWith p f = do
     Left err -> putStr err *> return []
     Right d -> return d
 
-readDirectoryWith :: Parser Doc -> FilePath -> IO [Doc]
+readDirectoryWith :: Parser Sent -> FilePath -> IO [Doc]
 -- | reads all the files in a directory as CoNLL-U files with a
 -- customized parser.
 readDirectoryWith p d = do fs' <- listDirectory d
                            let fs = map (d </>) fs'
                            mapM (readConlluFileWith p) fs
 
-readConlluWith :: Parser Doc -> FilePath -> IO [Doc]
+readConlluWith :: Parser Sent -> FilePath -> IO [Doc]
 -- | reads a file or a directory as CoNLL-U files with a customized
 -- parser.
 readConlluWith p fp = do f <- doesFileExist fp
@@ -56,15 +56,15 @@ readConlluWith p fp = do f <- doesFileExist fp
 -- ** readers using default parsers
 readConlluFile :: FilePath -> IO Doc
 -- | reads a CoNLL-U file.
-readConlluFile = readConlluFileWith document
+readConlluFile = readConlluFileWith sentence
 
 readDirectory :: FilePath -> IO [Doc]
 -- | reads all files in a directory as CoNLL-U files.
-readDirectory = readDirectoryWith document
+readDirectory = readDirectoryWith sentence
 
 readConllu :: FilePath -> IO [Doc]
 -- | reads a file or a directory as CoNLL-U files.
-readConllu = readConlluWith document
+readConllu = readConlluWith sentence
 
 ---
 -- * write
