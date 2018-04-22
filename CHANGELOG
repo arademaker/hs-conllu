@@ -1,0 +1,18 @@
+# -*- mode: org -*-
+#+TITLE: Revision history for hs-conllu
+
+* 0.0.1  -- 2018-01-12
+
+- First version. Released on an unsuspecting world.
+* 0.1.0 -- 2018-04-03
+- change Type module a lot -- basically breaks all existing code
+- remove Data.* modules, they should be in a separate package (and
+  will have to be rewritten) 
+- new type for words allows us to type-check simple words, multi-word
+  tokens, and empty nodes
+- remove Data.* modules, they should be in a separate package (and
+  will have to be rewritten) (closes #6 )
+- add tagsets to separate modules, to be imported qualified (closes
+  #7)
+- add requested parsing and printing functions (closes #9)
+- add recovery function to parser (closes #18)

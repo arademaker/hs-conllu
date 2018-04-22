@@ -1,0 +1,97 @@
+# -*- mode: org -*-
+#+TITLE: hs-conllu
+
+[[https://travis-ci.org/odanoburu/hs-conllu][file:https://travis-ci.org/odanoburu/hs-conllu.svg?branch=master]]
+
+this package provides a validating[fn:1] parser of the [[http://universaldependencies.org/format.html][CoNLL-U format]], along
+with a data model for its constituents. reading, pretty-printing, and
+diffing functions are also provided.
+
+further processing utilities are being developed and will be placed in
+a separate package.
+
+* installation
+  #+BEGIN_SRC sh
+  cd /path/of/choice/
+  git clone $REPO_URL
+  #+END_SRC
+  - using =cabal=:
+    #+BEGIN_SRC sh
+    cabal install
+    #+END_SRC
+  - using =stack=:
+    #+BEGIN_SRC sh
+    stack setup
+    stack build
+    stack install --system-ghc
+    #+END_SRC
+
+  the library is tested with GHC versions 8.0.2, 8.2.2, and 8.4.1 on
+  Linux and on OSX (thanks Travis!).
+
+  if you have problems with the dependency versions, you may try to
+  alter them in the cabal file for the version you have. the version
+  bounds were generated automatically by cabal, and are probably
+  conservative -- the library probably will probably still work if you
+  have the same major version. (if it does, make a PR!)
+
+  if you don't want to have this kind of problem anymore, try [[https://docs.haskellstack.org/en/stable/README/][stack]]
+  (see why [[https://www.fpcomplete.com/blog/2015/06/why-is-stack-not-cabal][here]]).
+
+* usage
+  if you would like to request features, please open an issue.
+
+** hs-conllu, the executable
+   this executable can be called using stack by
+   : stack exec hs-conllu [subcommand] [args]
+   it currently has two subcommands:
+   - validate :: read and pretty-print the file given as argument.
+   - diff :: diff the two CoNLL-U files provided as arguments, and
+             print them. this assumes changes have only been made to
+             word fields, not to sentence ordering, etc. if you'd like
+             finer grained diffing, you will have to use the library.
+
+** Reading CoNLL-U files
+   the reading functions are in the =IO= module.
+   #+BEGIN_SRC sh
+   $ ghci
+   > import Conllu.IO
+   > d <- readConllu "path/to/conllu"
+   #+END_SRC
+   will read the file at the specified path, or all the =*.conllu=
+   files in that path.
+
+   if your CoNLL-U files don't stricly follow the specification or I
+   got the parser wrong, please open an issue! aditionally, you may
+   solve your problem if you take a look at the =Parser= module.
+
+** Customizable parsers
+   if you just want to tweak how a few fields of the CoNLL-U format
+   are parsed, you may write a parser for that field and then
+   customize the standard parser with it. see the Haddock
+   documentation for the =Parse= module.
+
+   I didn't make the parser as customizable as it could be, so if that
+   bothers you, please create an issue or file a PR!
+
+** Pretty-Printing
+   the printing functions are in the =Print= module. see the Haddock
+   documentation!
+
+** Diffing
+   see the =Diff= module Haddock documentation.
+ 
+* contributing
+  I'm a new haskeller, so any help will probably be useful -- even if
+  its just a few pointers and comments on how I can improve the
+  library or my code.
+
+  if you want to contribute code, let me know, and go right on. you
+  may want to look at the =TODO.org= file.
+
+* Footnotes
+
+[fn:1] it currently only validates the CoNLL-U syntax, not its
+semantics (i.e., it will report an error if it finds a letter on the
+ID field, but won't complain if you specified an inexisting word as
+HEAD of another word).

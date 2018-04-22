@@ -17,39 +17,34 @@ import Conllu.Type
 import Conllu.Utils
 import Conllu.Parse
 import Conllu.Print
+import Conllu.Diff
 
 import System.Directory
-import System.Environment
 import System.FilePath
-import System.IO
-import qualified Text.Megaparsec as M
 
 
 -- * read functions
 
 ---
 -- ** readers using a customized parser
--- | these reader functions will read files using a customized parser
--- built with 'ParserC' and 'parserC'.
-readConlluFileWith :: Parser [Sentence] -> FilePath -> IO Document
+-- | these reader functions will read files using a customized
+-- parser. you can build one with 'ParserC' and 'parserC'.
+readConlluFileWith :: Parser Sent -> FilePath -> IO Doc
 -- | reads a file with a customized parser.
 readConlluFileWith p f = do
-  d <- readFile f
-  let r = M.parse p f d
-  case r of
-    Left err -> do
-      putStr . M.parseErrorPretty $ err
-      return $ Document f []
-    Right ss -> return $ Document (takeFileName f) ss
+  ds <- readFile f
+  case parseConlluWith p f ds of
+    Left err -> putStr err *> return []
+    Right d -> return d
 
-readDirectoryWith :: Parser [Sentence] -> FilePath -> IO [Document]
+readDirectoryWith :: Parser Sent -> FilePath -> IO [Doc]
 -- | reads all the files in a directory as CoNLL-U files with a
 -- customized parser.
 readDirectoryWith p d = do fs' <- listDirectory d
                            let fs = map (d </>) fs'
                            mapM (readConlluFileWith p) fs
 
-readConlluWith :: Parser [Sentence] -> FilePath -> IO [Document]
+readConlluWith :: Parser Sent -> FilePath -> IO [Doc]
 -- | reads a file or a directory as CoNLL-U files with a customized
 -- parser.
 readConlluWith p fp = do f <- doesFileExist fp
@@ -59,27 +54,39 @@ readConlluWith p fp = do f <- doesFileExist fp
 
 ---
 -- ** readers using default parsers
-readConlluFile :: FilePath -> IO Document
+readConlluFile :: FilePath -> IO Doc
 -- | reads a CoNLL-U file.
-readConlluFile = readConlluFileWith document
+readConlluFile = readConlluFileWith sentence
 
-readDirectory :: FilePath -> IO [Document]
+readDirectory :: FilePath -> IO [Doc]
 -- | reads all files in a directory as CoNLL-U files.
-readDirectory = readDirectoryWith document
+readDirectory = readDirectoryWith sentence
 
-readConllu :: FilePath -> IO [Document]
+readConllu :: FilePath -> IO [Doc]
 -- | reads a file or a directory as CoNLL-U files.
-readConllu = readConlluWith document
+readConllu = readConlluWith sentence
 
 ---
 -- * write
-writeConlluFile :: FilePath -> Document -> IO ()
+writeConlluFile :: FilePath -> Doc -> IO ()
 -- | writes a CoNLL-U file to disk.
 writeConlluFile fp = writeFile fp . printDoc
 
+---
 -- * print
 readAndPrintConllu :: FilePath -> IO ()
 -- | reads and prints the CoNLL-U files given.
 readAndPrintConllu fp = do
   readConlluFile fp >>= putStr . printDoc
+  return ()
+
+---
+-- * diff
+diffConllu :: FilePath -> FilePath -> IO ()
+-- | reads two CoNLL-U files and prints their diffs. this assumes
+-- their sentences are paired.
+diffConllu fp1 fp2 = do
+  ss1 <- readConlluFile fp1
+  ss2 <- readConlluFile fp2
+  print . printDDiff . diffSs $ zip ss1 ss2
   return ()

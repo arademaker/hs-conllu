@@ -1,10 +1,10 @@
 name:                hs-conllu
-version:             0.0.2
+version:             0.1.1
 synopsis:            Conllu validating parser and utils.
-description:         utilities to parse, print, and analyse data in CoNLL-U format.
-extra-doc-files:      README.org
-                    , CHANGELOG.org
-                    , TODO.org
+description:         utilities to parse, print, diff, and analyse data in CoNLL-U format.
+extra-doc-files:      README
+                    , CHANGELOG
+                    , TODO
 homepage:            https://github.com/odanoburu/hs-conllu
 bug-reports:         https://github.com/odanoburu/hs-conllu/issues
 license:             LGPL-3
@@ -14,7 +14,7 @@ maintainer:          bruno cuconato <bcclaro+hsconllu@gmail.com>
 category:            Language
 build-type:          Simple
 cabal-version:       >=1.18
-tested-with:          GHC==8.0.2, GHC==8.2.2, GHC==8.4.1
+tested-with:         GHC==8.0.2, GHC==8.2.2, GHC==8.4.1
 
 source-repository head
   type:              git
@@ -22,15 +22,14 @@ source-repository head
 
 library
   exposed-modules:     Conllu.Type,
-                       Conllu.Data.Tree,
-                       Conllu.Data.Token,
+                       Conllu.UposTagset,
+                       Conllu.DeprelTagset,
                        Conllu.IO,
                        Conllu.Parse,
                        Conllu.Diff,
                        Conllu.Utils,
-                       Conllu.Data.Lexicon,
                        Conllu.Print
-  --other-modules: Conllu.Utils
+--  other-modules: Conllu.Utils
   -- other-extensions:
   build-depends:       base >=4.9 && <5,
                        containers >0.5.8 && <0.6,
@@ -51,6 +50,9 @@ executable hs-conllu
                       filepath >=1.4 && <1.5,
                       megaparsec >=6 && <7
   other-modules:      Conllu.Type,
+                      Conllu.UposTagset,
+                      Conllu.DeprelTagset,
+                      Conllu.Diff,
                       Conllu.IO,
                       Conllu.Parse,
                       Conllu.Utils,

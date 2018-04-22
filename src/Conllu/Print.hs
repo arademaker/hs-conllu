@@ -14,51 +14,57 @@ module Conllu.Print
   , printSent )
 where
 
-import Conllu.Type
-import Conllu.Utils
+import qualified Conllu.DeprelTagset as D
+import           Conllu.Type
+import           Conllu.Utils
 
-import Data.List
-import Data.Maybe
-import Data.Semigroup
-import Data.Monoid (Monoid(mempty, mappend))
+import           Data.List
+import           Data.Maybe
+import           Data.Semigroup
+import           Data.Monoid (Monoid(mempty, mappend))
 
 -- TODO: use some kind of bi-directional thing to derive this module
 
--- | DiffList type from LYHGG
-newtype DiffList a = DiffList { getDiffList :: [a] -> [a] }
+-- | Functional list type from LYHGG, see HUGHES, RJM. "A novel
+-- representation of lists and its application to the function
+-- 'reverse'"
+newtype FList a = FList { getFList :: [a] -> [a] }
 
-instance Semigroup (DiffList a) where
-  (DiffList f) <> (DiffList g) = DiffList (f . g)
+instance Semigroup (FList a) where
+  (FList f) <> (FList g) = FList (f . g)
 
-instance Monoid (DiffList a) where
-  mempty = DiffList (\xs -> [] ++ xs)
+instance Monoid (FList a) where
+  mempty = FList (\xs -> [] ++ xs)
   a `mappend` b = a <> b
 
-toDiffList :: [a] -> DiffList a
-toDiffList xs = DiffList (xs++)
+toFList :: [a] -> FList a
+toFList xs = FList (xs++)
 
-fromDiffList :: DiffList a -> [a]
-fromDiffList (DiffList f) = f []
+fromFList :: FList a -> [a]
+fromFList (FList f) = f []
 
 ---
 -- printing
-printDoc :: Document -> String
--- | prints Document to a string.
-printDoc d =
-  fromDiffList . mconcat $
-  map (\s -> printSent s `mappend` diffLSpace) $ _sents d
+printDoc :: Doc -> String
+-- | prints a list of sentences to a string.
+printDoc =
+  fromFList . mconcat . map (\s -> printSent' s `mappend` diffLSpace)
 
-printSent :: Sentence -> DiffList Char
-printSent ss =
+printSent :: Sent -> String
+-- | prints a sentence to a string.
+printSent = fromFList . printSent'
+
+printSent' :: Sent -> FList Char
+printSent' ss =
   mconcat
     [ printComments (_meta ss)
     , diffLSpace
-    , printTks (_tokens ss)
+    , printWs (_words ss)
     ]
 
-printComments :: [Comment] -> DiffList Char
+printComments :: [Comment] -> FList Char
 printComments =
-  toDiffList .
+  toFList .
   intercalate "\n" .
   map
     (\(c1, c2) ->
@@ -70,87 +76,75 @@ printComments =
              else "= " ++ c2
          ])
 
-printTks :: [Token] -> DiffList Char
-printTks = foldr (\t dl -> mconcat [printTk t, diffLSpace, dl]) mempty
+printWs :: [CW a] -> FList Char
+printWs = foldr (\w dl -> mconcat [printW w, diffLSpace, dl]) mempty
 
-printTk :: Token -> DiffList Char
-printTk t = printTk' t
+printW :: CW a -> FList Char
+printW w = printW' w
   where
-    tkLine = toDiffList . intercalate "\t" . map (\f -> f t)
-    printTk' t
-      | isSToken t =
-        tkLine
-          [ printTkIx
-          , printForm
-          , printLemma
-          , printPostag
-          , printXpostag
-          , printFeats
-          , maybe "_" show . _dephead
-          , maybe "_" printDeprel . _deprel
-          , printDeps
-          , printMisc
-          ]
-      | isMTk t =
-        tkLine
-          [ printTkIx
-          , printForm
-          , emptyF
-          , emptyF
-          , emptyF
-          , emptyF
-          , emptyF
-          , emptyF
-          , emptyF
-          , printMisc
-          ]
-      | otherwise =
-        tkLine
-          [ printTkIx
-          , printForm
-          , printLemma
-          , printPostag
-          , printXpostag
-          , printFeats
-          , emptyF
-          , emptyF
-          , printDeps
-          , printMisc
-          ]
+    wordLine = toFList . intercalate "\t" . map (\f -> f w) . take 10
+    printW' w =
+      wordLine
+        [ printID'
+        , printFORM
+        , printLEMMA
+        , printUPOS'
+        , printXPOS
+        , printFEATS'
+        , printHEAD
+        , printDEPREL'
+        , printDEPS'
+        , printMISC
+        , undefined
+        ]
+    printID' = printID . _id
     printMStr = fromMaybe "_"
-    printTkIx tk = case _ix tk of
-      SId ix -> show $ ix
-      MId s e -> concat [show s, "-", show e]
-      EId ix e -> concat [show ix, ".", show e]
-    printForm = printMStr . _form
-    printLemma = printMStr . _lemma
-    printPostag = printPos . _upostag
-    printXpostag = printMStr . _xpostag
-    printFeats =
-      printList
-        (\(f, v) ->
-           f ++
-           if null v
-             then ""
-             else "=" ++ v) .
-      _feats
-    printDeps =
-      printList (\(i, dr) -> show i ++ ":" ++ printDeprel dr) . _deps
-    printDeprel (d, s) =
-      downcaseStr (show d) ++
-      if null s
-        then ""
-        else ":" ++ s
-    printMisc = fromMaybe "_" . _misc
-    emptyF t = "_"
+    printFORM = printMStr . _form
+    printLEMMA = printMStr . _lemma
+    printUPOS' = printUPOS . _upos
+    printXPOS = printMStr . _xpos
+    printFEATS' = printFEATS . _feats
+    printHEAD = maybe "_" (printID . _head) . _rel
+    printDEPREL' =
+      maybe "_" (\r -> printDEPREL (_deprel r) (_subdep r)) . _rel
+    printDEPS' = printDEPS . _deps
+    printMISC = printMStr . _misc
 
-printPos :: PosTag -> String
-printPos (Just AUXpos) = "AUX"
-printPos (Just DETpos) = "DET"
-printPos (Just PUNCTpos) = "PUNCT"
-printPos Nothing = "_"
-printPos (Just _pos) = show _pos
+---
+-- field printers
+printID :: ID -> String
+printID i =
+  case i of
+    SID i -> show i
+    MID s e -> concat [show s, "-", show e]
+    EID i e -> concat [show i, ".", show e]
 
+printUPOS :: UPOS -> String
+printUPOS Nothing = "_"
+printUPOS (Just pos) = show pos
+
+printFEATS :: FEATS -> String
+printFEATS =
+  printList
+    (\(f, v) ->
+       f ++
+       if null v
+         then ""
+         else "=" ++ v)
+
+printDEPREL :: D.EP -> Maybe String -> String
+printDEPREL dr sdr =
+  downcaseStr $ show dr ++ maybe "" (":" ++) sdr
+
+printDEPS :: DEPS -> String
+printDEPS =
+  printList
+    (\r ->
+       concat
+         [printID (_head r), ":", printDEPREL (_deprel r) (_subdep r)])
+
+---
+-- utility printers
 printList :: (a -> String) -> [a] -> String
 printList f = nullToStr . intercalate "|" . map f
   where
@@ -160,5 +154,5 @@ printList f = nullToStr . intercalate "|" . map f
         then "_"
         else xs
 
-diffLSpace :: DiffList Char
-diffLSpace = toDiffList "\n"
+diffLSpace :: FList Char
+diffLSpace = toFList "\n"

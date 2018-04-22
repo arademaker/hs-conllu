@@ -1,5 +1,5 @@
 -- |
--- Module      :  Conllu.Parse
+-- Module      :  Conllu.Type
 -- Copyright   :  © 2018 bruno cuconato
 -- License     :  LPGL-3
 --
@@ -9,227 +9,168 @@
 --
 -- defines types for handling CoNLL-U data.
 
+{-# LANGUAGE EmptyDataDecls #-}
 
 module Conllu.Type where
 
 ---
 -- imports
-import Conllu.Utils
+import           Conllu.Utils
+import qualified Conllu.UposTagset as U
+import qualified Conllu.DeprelTagset as D
 
-import Control.Exception.Base
-import Data.Char
-import Data.Function
-import Data.List
-import Data.Maybe
-import Data.Ord
-import Data.Tree
+import           Data.Ord
 
 ---
--- type and data declarations
-data Document = Document
-  { _file      :: String -- ^ original filename for document.
-  , _sents     :: [Sentence] -- ^ sentences in CoNLL-U file.
-  } deriving (Eq,Show)
+-- * type and data declarations
+-- ** Documents and Sentences
+type Doc = [Sent]
 
-data Sentence = Sentence
-  { _meta :: [Comment] -- ^ the sentence's comments.
-  , _tokens :: [Token] -- ^ the sentence's tokens.
+data Sent = Sent
+  { _meta  :: [Comment]  -- ^ the sentence's comments.
+  , _words :: [CW AW] -- ^ the sentence's words.
   } deriving (Eq, Show)
 
--- | most comments are (key, value) pairs
+-- | most comments are (key, value) pairs.
 type Comment    = StringPair
 type StringPair = (String, String)
 
-data Token
-  = SToken { _ix      :: TkIndex -- ^ ID field
-           , _form    :: Form -- ^ FORM field
-           , _lemma   :: Lemma -- ^ LEMMA field
-           , _upostag :: PosTag -- ^ UPOS field
-           , _xpostag :: Xpostag -- ^ XPOS field
-           , _feats   :: Feats -- ^ FEATS field
-           , _dephead :: Dephead -- ^ HEAD field
-           , _deprel  :: DepRel -- ^ DEPREL field
-           , _deps    :: Deps -- ^ DEPS field
-           , _misc    :: Misc -- ^ MISC field
-           }
-  | MToken { _ix    :: TkIndex
-           , _form  :: Form
-           , _misc  :: Misc
-           -- other values should be empty
-           }
-  | EToken { _ix       :: TkIndex
-           , _form     :: Form
-           , _lemma    :: Lemma
-           , _upostag  :: PosTag
-           , _xpostag  :: Xpostag
-           , _feats    :: Feats
-           -- heads and deprels specified in deps
-           , _deps     :: Deps
-           , _misc     :: Misc
-           }
+-- ** Words
+-- | represents a word line in a CoNLL-U file. note that we have
+-- collapsed some fields together: 'HEAD' and DEPREL have been
+-- combined as a relation type Rel accessible by the '_rel' function;
+-- the 'DEPS' field is merely a list of 'Rel'.
+--
+-- a C(oNLL-U)W(ord) may be a simple word, a multi-word token, or an
+-- empty node. this is captured by the phantom type (the `a` in the
+-- declaration), which can be parametrized by one of the data types
+-- below in order to build functions that only operate on one of these
+-- word types (see 'mkSWord' on how to do this). see the '_dep'
+-- function, which only operates on simple words, which are the ones
+-- that have a DEPREL field.
+data CW a = CW
+  { _id    :: ID        -- ^ ID field
+  , _form  :: FORM      -- ^ FORM field
+  , _lemma :: LEMMA     -- ^ LEMMA field
+  , _upos  :: UPOS      -- ^ UPOS field
+  , _xpos  :: XPOS      -- ^ XPOS field
+  , _feats :: FEATS     -- ^ FEATS field
+  , _rel   :: Maybe Rel -- ^ combined HEAD and DEPREL fields
+  , _deps  :: DEPS      -- ^ DEPS field
+  , _misc  :: MISC      -- ^ MISC field
+  } deriving (Eq, Show)
+
+instance Ord (CW a) where
+  compare = comparing _id
+
+-- *** Word types
+-- | phantom type for any kind of word.
+data AW
+-- | phantom type for a simple word.
+data SW
+-- | phantom type for multiword tokens. do note that in MWTs only the
+-- 'ID', 'FORM' and 'MISC' fields may be non-empty.
+data MT
+-- | phantom type for an empty node.
+data EN
+
+-- *** Word Fields
+data ID -- | Word ID field.
+  = SID Index -- ^ word ID is an integer
+  | MID Index
+        Index -- ^ multi-word token ID is a range
+  | EID Index
+        Index -- ^ empty node ID is a decimal
   deriving (Eq, Show)
 
+instance Ord ID where
+  compare = idOrd
+    where
+      idOrd :: ID -> ID -> Ordering
+      idOrd id1 id2 =
+        let c = comparing fstIx id1 id2
+        in case c of
+          EQ -> sameIx id1 id2
+          _ -> c
+        where
+          fstIx :: ID -> Index
+          fstIx (SID i) = i
+          fstIx (MID i _ei) = i
+          fstIx (EID i _ei) = i
+          sndIx :: ID -> Index
+          sndIx (EID _s e) = e
+          sndIx (MID _s e) = e
+          sameIx :: ID -> ID -> Ordering
+          sameIx (SID _) _id = GT
+          sameIx _id (SID _) = LT
+          -- reverse ID order so that MID 1 4 comes before MID 1 2:
+          sameIx i1 i2 = comparing sndIx i2 i1
 
-data TkIndex
-  = SId Index -- ^ Simple token ID is an integer
-  | MId Index
-        Index -- ^ multi-word token ID is a range
-  | EId Index
-        Index -- ^ empty token ID is a decimal
-  deriving (Eq, Show, Ord)
+type FORM  = Maybe String
+type LEMMA = Maybe String
+type UPOS  = Maybe U.POS
+type XPOS  = Maybe String
+type FEATS = [StringPair] -- ^ features come in (key, value) pairs
+type HEAD  = ID
+type DEPS  = [Rel]
+type MISC  = Maybe String
 
-type Index = Int
+-- | dependency relation representation.
+data Rel = Rel
+  { _head   :: HEAD         -- ^ head 'ID'
+  , _deprel :: D.EP         -- ^ dependency relation type
+  , _subdep :: Maybe String -- ^ dependency relation subtype
+  } deriving (Eq, Show)
+
+type Index   = Int
+-- | 'ID' separator in meta words
 type IxSep   = Char
-type Form    = Maybe String
-type Lemma   = Maybe String
-type PosTag  = Maybe Pos
-type Xpostag = Maybe String
-type Feats   = [StringPair] -- ^ features come in (key, value) pairs
-type Dephead = Maybe TkIndex
-type DepRel  = Maybe (Dep,Subtype)
-type Subtype = String
-type Deps    = [(TkIndex,(Dep,Subtype))]
-type Misc    = Maybe String
 
-_dep :: Token -> Maybe Dep
+---
+-- ** accessor functions
+_dep :: CW SW -> Maybe D.EP
 -- | get DEPREL main value, if it exists.
-_dep = dep . _deprel
-  where
-    dep (Just (dr,_)) = Just dr
-    dep _ = Nothing
+_dep w = Just . _deprel =<< _rel w
 
-depIs :: Dep -> Token -> Bool
+depIs :: D.EP -> CW SW -> Bool
+-- | check if DEP is the one provided.
 depIs d = maybe False (\d' -> d == d') . _dep
 
-data Dep
-  = ACL
-  | ADVCL
-  | ADVMOD
-  | AMOD
-  | APPOS
-  | AUX
-  | CASE
-  | CC
-  | CCOMP
-  | CLF
-  | COMPOUND
-  | CONJ
-  | COP
-  | CSUBJ
-  | DEP
-  | DET
-  | DISCOURSE
-  | DISLOCATED
-  | EXPL
-  | FIXED
-  | FLAT
-  | GOESWITH
-  | IOBJ
-  | LIST
-  | MARK
-  | NMOD
-  | NSUBJ
-  | NUMMOD
-  | OBJ
-  | OBL
-  | ORPHAN
-  | PARATAXIS
-  | PUNCT
-  | REPARANDUM
-  | ROOT
-  | VOCATIVE
-  | XCOMP
-  deriving (Eq, Read, Show)
-
-data Pos
-  = ADJ
-  | ADP
-  | ADV
-  | AUXpos -- pos because there is an aux in deprel
-  | CCONJ
-  | DETpos
-  | INTJ
-  | NOUN
-  | NUM
-  | PART
-  | PRON
-  | PROPN
-  | PUNCTpos
-  | SCONJ
-  | SYM
-  | VERB
-  | X
-  deriving (Eq, Read, Show)
-
--- trees
-type TTree  = Tree Token -- only STokens
--- data Tree a = Node a [Tree a]
-
-type ETree = (TTree, [Token]) -- enhanced tree
-
 ---
--- constructor functions
-mkDep :: String -> Dep
-mkDep = read . upcaseStr
+-- ** constructor functions
+mkDEP :: String -> D.EP
+-- | read a main DEPREL (no subtype).
+mkDEP = read . upcaseStr
 
-mkPos :: String -> Pos
-mkPos = mkPos' . upcaseStr
-  where
-    mkPos' "AUX" = AUXpos
-    mkPos' "DET" = DETpos
-    mkPos' "PUNCT" = PUNCTpos
-    mkPos' pos = read pos
+mkUPOS :: String -> U.POS
+-- | read an 'UPOS' tag.
+mkUPOS = read . upcaseStr
 
--- tokens
-mkToken :: TkIndex -> Form -> Lemma
-  ->  PosTag -> Xpostag -> Feats -> Dephead -> DepRel -> Deps
-  -> Misc -> Token
-mkToken ix = case ix of
-  SId _   -> mkSTk ix
-  MId _ _ -> mkMTk ix
-  EId _ _ -> mkETk ix
+-- words
+mkAW :: ID -> FORM -> LEMMA -> UPOS -> XPOS -> FEATS -> Maybe Rel
+  -> DEPS -> MISC -> CW AW
+-- | make a word from its fields, by default it has phantom type of AW
+-- (any kind of word).
+mkAW = CW
 
-mkSTk :: TkIndex -> Form -> Lemma -> PosTag -> Xpostag
-  -> Feats -> Dephead -> DepRel -> Deps -> Misc -> Token
-mkSTk i fo l up xp fe h dr d m =
-  SToken { _ix      = i
-         , _form    = fo
-         , _lemma   = l
-         , _upostag = up
-         , _xpostag = xp
-         , _feats   = fe
-         , _dephead = h
-         , _deprel  = dr
-         , _deps    = d
-         , _misc    = m
-         }
+mkSW :: CW AW -> CW SW
+-- | coerce a word to a simple word.
+mkSW CW { _id = i
+        , _form = f
+        , _lemma = l
+        , _upos = u
+        , _xpos = x
+        , _feats = fs
+        , _rel = r
+        , _deps = ds
+        , _misc = m
+        } = CW i f l u x fs r ds m
 
-mkMTk :: TkIndex -> Form -> Lemma -> PosTag -> Xpostag
-  -> Feats -> Dephead -> DepRel -> Deps -> Misc -> Token
-mkMTk s fo l up xp fe h dr d m =
-  assert
-    (mTkOK fo l up xp fe h dr d)
-    MToken {_ix = s, _form = fo, _misc = m}
-
-mkETk :: TkIndex -> Form -> Lemma -> PosTag -> Xpostag
-  -> Feats -> Dephead -> DepRel -> Deps -> Misc -> Token
-mkETk i fo l up xp fe h dr d m =
-  assert (eTkOK h dr d)
-  EToken
-  { _ix      = i
-  , _form    = fo
-  , _lemma   = l
-  , _upostag = up
-  , _xpostag = xp
-  , _feats   = fe
-  , _deps    = d
-  , _misc    = m
-  }
-
+{-- saved for a future validation module
 ---
 -- validation
-mTkOK :: Form -> Lemma -> PosTag -> Xpostag -> Feats -> Dephead
-  -> DepRel -> Deps -> Bool
+mTkOK :: FORM -> LEMMA -> UPOS -> XPOS -> FEATS -> (ID, (Dep, Maybe String))
+  -> Bool
 mTkOK fo l up xp fe h dr d =
   assSomething fo $
   assNothing l $
@@ -240,42 +181,4 @@ mTkOK fo l up xp fe h dr d =
 eTkOK :: Dephead -> DepRel -> Deps -> Bool
 eTkOK h dr d =
   assNothing h $ assNothing dr $ (assert . not . null $ d) True
-
----
--- utility functions
-tkOrd :: Token -> Token -> Ordering
--- | an ordering for tokens.
-tkOrd t1 t2 =
-  let c = (compare `on` _ix) t1 t2
-  in case c of
-       EQ -> sameIx t1 t2
-       _ -> c
-  where
-    sameIx SToken {} _t = GT
-    sameIx _t SToken {} = LT
-
-actOnSentTks :: ([Token] -> [Token]) -> Sentence -> Sentence
-actOnSentTks f s@Sentence{_tokens=tks} = s{_tokens=f tks}
-
-actOnDocTks :: ([Token] -> [Token]) -> Document -> Document
-actOnDocTks f d@Document {_sents = ss} =
-  d {_sents = map (actOnSentTks f) ss}
-
-sentTksByType :: Sentence -> ([Token],[Token])
--- ([SToken],[metaTokens:EToken,MToken])
-sentTksByType Sentence{_tokens=ts} = partition isSToken ts
-
-isSToken :: Token -> Bool
-isSToken SToken{} = True
-isSToken _        = False
-
-isMTk :: Token -> Bool
-isMTk MToken{} = True
-isMTk _tk      = False
-
-sTkIx :: Token -> Index
--- this should be safe
-sTkIx SToken{_ix =(SId ix)} = ix
-
-sentSTks :: Sentence -> [Token]
-sentSTks = fst . sentTksByType
+--}

@@ -40,9 +40,18 @@ if' :: Bool -> a -> a -> a
 if' True  x  _b = x
 if' False _b y  = y
 
-(?:) :: Maybe a -> [a] -> [a]
--- | cons value if it is a Just, else do Nothing.
-ma ?: as =
-  case ma of
-    (Just a) -> a : as
-    Nothing  -> as
+consIf :: (a -> Bool) -> a -> [a] -> [a]
+-- | cons value if it satisfies the predicate, else do nothing.
+consIf p a as =
+  if p a
+    then a : as
+    else as
+
+---
+-- safe functions
+safehead :: [a] -> Maybe a
+safehead [] = Nothing
+safehead (x:_) = Just x
+
+safeRead :: Read a => String -> Maybe a
+safeRead = fmap fst . listToMaybe . reads

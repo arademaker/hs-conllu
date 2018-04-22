@@ -13,7 +13,7 @@ module Main
   ( main )
 where
 
-import Conllu.IO (readAndPrintConllu)
+import Conllu.IO (readAndPrintConllu, diffConllu)
 
 import System.Environment
 
@@ -25,4 +25,5 @@ main = do
   (c:as) <- getArgs
   case c of
     "validate" -> mapM_ readAndPrintConllu as
+    "diff"     -> diffConllu (as !! 0) (as !! 1)
     _ -> return ()
