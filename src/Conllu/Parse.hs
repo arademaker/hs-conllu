@@ -55,13 +55,15 @@ import           Conllu.Type
 import qualified Conllu.DeprelTagset as D
 import qualified Conllu.UposTagset as U
 
-import           Control.Applicative
-import           Control.Monad
+import           Control.Monad (void, liftM2)
 import           Data.Either
 import           Data.Maybe
-import           Data.Void
+import           Data.Void (Void)
 
-import           Text.Megaparsec
+import Text.Megaparsec
+       (ParseError, Parsec, (<?>), (<|>), between, endBy1, eof, lookAhead,
+        many, option, optional, parse, parseErrorPretty, sepBy1,
+        skipManyTill, some, takeWhileP, try, withRecovery)
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
 
