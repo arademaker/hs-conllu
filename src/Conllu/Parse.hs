@@ -71,7 +71,7 @@ type Parser = Parsec Void String
 -- | Parser raw output
 type RawData t e = [Either (ParseError t e) Sent]
 
--- | DEPREL field type synonim
+-- | DEPREL field type synonym
 type DEPREL = Maybe (D.EP, Maybe String)
 
 
@@ -83,15 +83,20 @@ rawSents = rawSentsC sentence
 
 rawSentsC :: Parser Sent -> Parser (RawData Char Void)
 -- | parse CoNLL-U sentences with recovery, using a custom parser.
-rawSentsC sent = between ws eof (e `endBy1` blankLine)
+rawSentsC sent = between ws eof (e `endBy1` lineFeed)
   where
     e = withRecovery recover (Right <$> sent)
     recover err =
-      Left err <$ skipManyTill anyChar blankLine
+      Left err <$
+      skipManyTill anyChar
+      -- if parser consumes the first newline but can't parse the
+      -- second, it breaks; it can't consume the second one, because
+      -- that one has to be consumed by the endBy1
+      (try $ lineFeed *> lookAhead lineFeed)
 
-blankLine :: Parser ()
+lineFeed :: Parser ()
 -- | parse a blank line.
-blankLine = lexeme . void $ newline -- spaces shouldn't exist, but no
+lineFeed = lexeme . void $ newline -- spaces shouldn't exist, but no
                                     -- problem being lax here
 
 sentence :: Parser Sent
@@ -107,7 +112,7 @@ comment :: Parser Comment
 -- | parse a comment.
 comment =
   (symbol "#" <?> "comment starter") *> commentPair <*
-  newline <?> "comment content"
+  lineFeed <?> "comment content"
 
 word :: Parser (CW AW)
 -- | the default word parser.
@@ -136,7 +141,7 @@ wordC ixp fop lp upp xpp fsp drp dsp mp = do
   mdh <- dhp <* tab
   mdr <- drp <* tab
   ds <- dsp <* tab
-  mm <- mp <* newline
+  mm <- mp <* lineFeed
   return $ mkAW i mf ml mup mxp mfs (rel mdh mdr) ds mm
   where
     dhp = maybeEmpty ixp <?> "HEAD"
