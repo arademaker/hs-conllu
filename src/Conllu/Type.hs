@@ -117,9 +117,9 @@ type MISC  = Maybe String
 
 -- | feature representation
 data Feat = Feat
-  { _feat :: String       -- ^ feature name
-  , _fvs  :: [String]     -- ^ feature values
-  , _ft   :: Maybe String -- ^ feature type (inside brackets)
+  { _feat       :: String       -- ^ feature name
+  , _featValues :: [String]     -- ^ feature values
+  , _featType   :: Maybe String -- ^ feature type (inside brackets).
   } deriving (Eq, Show) -- add manual Ord instance?
 
 -- | dependency relation representation.
