@@ -125,10 +125,11 @@ printUPOS Nothing = "_"
 printUPOS (Just pos) = show pos
 
 printFEATS :: FEATS -> String
-printFEATS =
-  printList printFeat
+printFEATS = printList printFeat
   where
-    printFeat Feat{_feat=f, _featValues=vs, _featType=mft} = let fts = maybe "" (\ft -> "[" ++ ft ++ "]") mft in concat [f, fts, "=", intercalate "," vs]
+    printFeat Feat {_feat = f, _featValues = vs, _featType = mft} =
+      let fts = maybe "" (\ft -> "[" ++ ft ++ "]") mft
+      in concat [f, fts, "=", intercalate "," vs]
 
 printDEPREL :: D.EP -> Maybe String -> String
 printDEPREL dr sdr =

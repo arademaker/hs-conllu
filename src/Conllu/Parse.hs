@@ -207,7 +207,9 @@ feats = listP (feat `sepBy` symbol "|" <?> "FEATS")
   where
     feat = do
       k  <- lexeme (some alphaNumChar <?> "feature key")
-      ft <- optional $ between (symbol "[") (symbol "]") (some alphaNumChar) 
+      ft <-
+        optional $
+        between (symbol "[") (symbol "]") (some alphaNumChar)
       _  <- symbol "="
       vs <- fvalue `sepBy1` symbol ","
       return $ Feat k vs ft
