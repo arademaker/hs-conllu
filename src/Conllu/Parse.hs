@@ -62,7 +62,7 @@ import           Data.Void (Void)
 
 import Text.Megaparsec
        (ParseError, Parsec, (<?>), (<|>), between, endBy1, eof, lookAhead,
-        many, option, optional, parse, parseErrorPretty, sepBy1,
+        many, option, optional, parse, parseErrorPretty, sepBy, sepBy1,
         skipManyTill, some, takeWhileP, try, withRecovery)
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
@@ -203,9 +203,17 @@ xpos = maybeEmpty stringWOSpaces <?> "XPOS"
 
 feats :: Parser FEATS
 -- | parse the FEATS field.
-feats = listP (listPair "=" (stringNot "=") (stringNot "\t|")
-               <?> "feature pair")
-        <?> "FEATS"
+feats = listP (feat `sepBy` symbol "|" <?> "FEATS")
+  where
+    feat = do
+      k  <- lexeme (some alphaNumChar <?> "feature key")
+      ft <-
+        optional $
+        between (symbol "[") (symbol "]") (some alphaNumChar)
+      _  <- symbol "="
+      vs <- fvalue `sepBy1` symbol ","
+      return $ Feat k vs ft
+    fvalue = lexeme (some alphaNumChar <?> "feature value")
 
 deprel :: Parser DEPREL
 -- | parse the DEPREL field.
