@@ -151,7 +151,7 @@ wordC ixp fop lp upp xpp fsp drp dsp mp = do
     rel mdh mdr = do
       dh <- mdh
       (dr, sdr) <- mdr
-      return $ Rel dh dr sdr Nothing
+      return $ Rel dh dr sdr []
 
 emptyField :: Parser (Maybe a)
 -- | parse an empty field.
@@ -218,12 +218,13 @@ deprel :: Parser DEPREL
 -- | parse the DEPREL field.
 deprel = maybeEmpty deprel'
 
+dep :: Parser D.EP
+dep = (fmap mkDEP) $! (letters <?> "DEPREL")
+
 deprel' :: Parser (D.EP, Maybe String)
 -- | parse a non-empty DEPREL field.
 deprel' = liftM2 (,) dep subdeprel
   where
-    dep :: Parser D.EP
-    dep = (fmap mkDEP) $! (letters <?> "DEPREL")
     subdeprel :: Parser (Maybe String)
     subdeprel = optional (symbol ":" *> letters <?> "DEPREL subtype")
 
@@ -233,20 +234,14 @@ deps = listP (eDep `sepBy` symbol "|" <?> "DEPS")
   where
     eDep = do
       h <- idW <?> "enhanced dependency HEAD"
-      _ <- symbol ":"
-      (dep, sDep) <- deprel' <?> "enhanced dependency DEPREL"
       _ <- sep
-      caseI' <-
-        optional
-          (stringNot "| :" <?> "enhanced dependency case information")
-      _ <- sep
-      caseI'' <-
-        optional letters <?>
-        "enhanced dependecy morphological case information"
-      return $ Rel h dep sDep (caseI caseI' caseI'')
-    sep = optional $ symbol ":"
-    caseI Nothing Nothing = Nothing
-    caseI c1 c2 = Just (fromMaybe "" c1, fromMaybe "" c2)
+      dep <- dep <?> "enhanced dependency DEPREL"
+      _ <- optional sep
+      restI <-
+        stringNot "| :" `sepBy` sep <?>
+        "enhanced dependency information"
+      return $ Rel h dep Nothing restI
+    sep = symbol ":"
 
 misc :: Parser MISC
 -- | parse the MISC field.
