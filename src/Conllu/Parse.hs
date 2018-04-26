@@ -223,9 +223,9 @@ deprel' :: Parser (D.EP, Maybe String)
 deprel' = liftM2 (,) dep subdeprel
   where
     dep :: Parser D.EP
-    dep = fmap mkDEP (lexeme asciiStr <?> "DEPREL")
+    dep = (fmap mkDEP) $! (letters <?> "DEPREL")
     subdeprel :: Parser (Maybe String)
-    subdeprel = optional (symbol ":" *> asciiStr <?> "DEPREL subtype")
+    subdeprel = optional (symbol ":" *> letters <?> "DEPREL subtype")
 
 deps :: Parser DEPS
 -- | parse the DEPS field.
@@ -233,6 +233,7 @@ deps = listP (eDep `sepBy` symbol "|" <?> "DEPS")
   where
     eDep = do
       h <- idW <?> "enhanced dependency HEAD"
+      _ <- symbol ":"
       (dep, sDep) <- deprel' <?> "enhanced dependency DEPREL"
       _ <- sep
       caseI' <-
@@ -240,7 +241,7 @@ deps = listP (eDep `sepBy` symbol "|" <?> "DEPS")
           (stringNot "| :" <?> "enhanced dependency case information")
       _ <- sep
       caseI'' <-
-        optional asciiStr <?>
+        optional letters <?>
         "enhanced dependecy morphological case information"
       return $ Rel h dep sDep (caseI caseI' caseI'')
     sep = optional $ symbol ":"
@@ -274,9 +275,9 @@ stringWSpaces :: Parser String
 -- | parse a string until a tab or a newline.
 stringWSpaces = stringNot "\t\n"
 
-asciiStr :: Parser String
--- | parse a string of ascii letters.
-asciiStr = lexeme $ some asciiChar
+letters :: Parser String
+-- | parse a string of letters.
+letters = lexeme $ some letterChar
 
 ---
 -- parser combinators

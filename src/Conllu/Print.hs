@@ -153,5 +153,8 @@ printList f = nullToStr . intercalate "|" . map f
         then "_"
         else xs
 
+printMaybe :: Maybe String -> String
+printMaybe = maybe "" (":" ++)
+
 diffLSpace :: FList Char
 diffLSpace = toFList "\n"
