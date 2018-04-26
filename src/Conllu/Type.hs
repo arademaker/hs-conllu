@@ -110,10 +110,17 @@ type FORM  = Maybe String
 type LEMMA = Maybe String
 type UPOS  = Maybe U.POS
 type XPOS  = Maybe String
-type FEATS = [StringPair] -- ^ features come in (key, value) pairs
+type FEATS = [Feat]
 type HEAD  = ID
 type DEPS  = [Rel]
 type MISC  = Maybe String
+
+-- | feature representation
+data Feat = Feat
+  { _feat       :: String       -- ^ feature name
+  , _featValues :: [String]     -- ^ feature values
+  , _featType   :: Maybe String -- ^ feature type (inside brackets).
+  } deriving (Eq, Show) -- add manual Ord instance?
 
 -- | dependency relation representation.
 data Rel = Rel

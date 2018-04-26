@@ -80,11 +80,11 @@ printWs :: [CW a] -> FList Char
 printWs = foldr (\w dl -> mconcat [printW w, diffLSpace, dl]) mempty
 
 printW :: CW a -> FList Char
-printW w = printW' w
+printW = printW'
   where
-    wordLine = toFList . intercalate "\t" . map (\f -> f w) . take 10
+    printW' :: CW a -> FList Char
     printW' w =
-      wordLine
+      wordLine w
         [ printID'
         , printFORM
         , printLEMMA
@@ -95,8 +95,9 @@ printW w = printW' w
         , printDEPREL'
         , printDEPS'
         , printMISC
-        , undefined
         ]
+    wordLine :: CW a -> [CW a -> String] -> FList Char
+    wordLine w = toFList . intercalate "\t" . map (\f -> f w)
     printID' = printID . _id
     printMStr = fromMaybe "_"
     printFORM = printMStr . _form
@@ -113,8 +114,8 @@ printW w = printW' w
 ---
 -- field printers
 printID :: ID -> String
-printID i =
-  case i of
+printID id' =
+  case id' of
     SID i -> show i
     MID s e -> concat [show s, "-", show e]
     EID i e -> concat [show i, ".", show e]
@@ -124,13 +125,11 @@ printUPOS Nothing = "_"
 printUPOS (Just pos) = show pos
 
 printFEATS :: FEATS -> String
-printFEATS =
-  printList
-    (\(f, v) ->
-       f ++
-       if null v
-         then ""
-         else "=" ++ v)
+printFEATS = printList printFeat
+  where
+    printFeat Feat {_feat = f, _featValues = vs, _featType = mft} =
+      let fts = maybe "" (\ft -> "[" ++ ft ++ "]") mft
+      in concat [f, fts, "=", intercalate "," vs]
 
 printDEPREL :: D.EP -> Maybe String -> String
 printDEPREL dr sdr =

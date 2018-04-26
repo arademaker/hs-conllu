@@ -61,9 +61,9 @@ import           Data.Maybe
 import           Data.Void (Void)
 
 import Text.Megaparsec
-       (ParseError, Parsec, (<?>), (<|>), between, endBy1, eof, lookAhead,
-        many, option, optional, parse, parseErrorPretty, sepBy1,
-        skipManyTill, some, takeWhileP, try, withRecovery)
+       (ParseError, Parsec, (<?>), (<|>), between, eitherP, endBy1, eof,
+        lookAhead, many, option, optional, parse, parseErrorPretty, sepBy,
+        sepBy1, skipManyTill, some, takeWhileP, try, withRecovery)
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
 
@@ -165,18 +165,17 @@ idW = do
   mix <- optional metaIndex <?> "meta token ID"
   return $
     case mix of
-      Nothing         -> SID ix
-      Just ('-', eix) -> MID ix eix
-      Just ('.', eix) -> EID ix eix
+      Nothing             -> SID ix
+      Just (Left _, eix)  -> MID ix eix
+      Just (Right _, eix) -> EID ix eix
   where
     index :: Parser Index
     index = do
       ix <- some digitChar <?> "ID"
       return (read ix :: Int)
-    indexSep :: Parser IxSep
-    indexSep =
-      fmap head (symbol "-" <|> symbol "." <?> "meta separator")
-    metaIndex :: Parser (IxSep, Index)
+    indexSep :: Parser (Either IxSep IxSep)
+    indexSep = eitherP (char '-') (char '.') <?> "meta separator"
+    metaIndex :: Parser (Either IxSep IxSep, Index)
     metaIndex = do
       sep <- indexSep
       ix <- index
@@ -203,9 +202,17 @@ xpos = maybeEmpty stringWOSpaces <?> "XPOS"
 
 feats :: Parser FEATS
 -- | parse the FEATS field.
-feats = listP (listPair "=" (stringNot "=") (stringNot "\t|")
-               <?> "feature pair")
-        <?> "FEATS"
+feats = listP (feat `sepBy` symbol "|" <?> "FEATS")
+  where
+    feat = do
+      k  <- lexeme (some alphaNumChar <?> "feature key")
+      ft <-
+        optional $
+        between (symbol "[") (symbol "]") (some alphaNumChar)
+      _  <- symbol "="
+      vs <- fvalue `sepBy1` symbol ","
+      return $ Feat k vs ft
+    fvalue = lexeme (some alphaNumChar <?> "feature value")
 
 deprel :: Parser DEPREL
 -- | parse the DEPREL field.
