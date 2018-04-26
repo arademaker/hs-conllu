@@ -124,9 +124,12 @@ data Feat = Feat
 
 -- | dependency relation representation.
 data Rel = Rel
-  { _head   :: HEAD         -- ^ head 'ID'
-  , _deprel :: D.EP         -- ^ dependency relation type
+  { _head :: HEAD -- ^ head 'ID'
+  , _deprel :: D.EP -- ^ dependency relation type
   , _subdep :: Maybe String -- ^ dependency relation subtype
+  , _caseI :: Maybe (String, String) -- ^ case information (only for
+                                     -- enhanced dependencies, see
+                                     -- docs)
   } deriving (Eq, Show)
 
 type Index   = Int
