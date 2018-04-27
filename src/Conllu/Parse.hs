@@ -151,7 +151,7 @@ wordC ixp fop lp upp xpp fsp drp dsp mp = do
     rel mdh mdr = do
       dh <- mdh
       (dr, sdr) <- mdr
-      return $ Rel dh dr sdr []
+      return $ Rel dh dr sdr Nothing
 
 emptyField :: Parser (Maybe a)
 -- | parse an empty field.
@@ -219,7 +219,7 @@ deprel :: Parser DEPREL
 deprel = maybeEmpty deprel'
 
 dep :: Parser D.EP
-dep = (fmap mkDEP) $! (letters <?> "DEPREL")
+dep = fmap mkDEP (letters <?> "DEPREL")
 
 deprel' :: Parser (D.EP, Maybe String)
 -- | parse a non-empty DEPREL field.
@@ -235,12 +235,13 @@ deps = listP (eDep `sepBy` symbol "|" <?> "DEPS")
     eDep = do
       h <- idW <?> "enhanced dependency HEAD"
       _ <- sep
-      dep <- dep <?> "enhanced dependency DEPREL"
-      _ <- optional sep
+      d <- dep <?> "enhanced dependency DEPREL"
       restI <-
-        stringNot "| :" `sepBy` sep <?>
-        "enhanced dependency information"
-      return $ Rel h dep Nothing restI
+        optional
+          (sep *>
+           stringNot "\t| :" `sepBy` sep <?>
+           "enhanced dependency information")
+      return $ Rel h d Nothing restI
     sep = symbol ":"
 
 misc :: Parser MISC

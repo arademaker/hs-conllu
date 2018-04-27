@@ -127,7 +127,7 @@ data Rel = Rel
   { _head :: HEAD -- ^ head 'ID'
   , _deprel :: D.EP -- ^ dependency relation type
   , _subdep :: Maybe String -- ^ dependency relation subtype
-  , _rest :: [String] -- ^ provisitonal, see issues #23,#17
+  , _rest :: Maybe [String] -- ^ provisitonal, see issues #23,#17
   } deriving (Eq, Show)
 
 type Index   = Int

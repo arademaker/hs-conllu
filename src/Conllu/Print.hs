@@ -142,7 +142,7 @@ printDEPS =
        intercalate
          ":"
          ([printID (_head r), printDEPREL (_deprel r) (_subdep r)] ++
-          (_rest r)))
+          fromMaybe [] (_rest r)))
 
 ---
 -- utility printers
@@ -154,9 +154,6 @@ printList f = nullToStr . intercalate "|" . map f
       if null xs
         then "_"
         else xs
-
-printMaybe :: Maybe String -> String
-printMaybe = maybe "" (":" ++)
 
 diffLSpace :: FList Char
 diffLSpace = toFList "\n"
