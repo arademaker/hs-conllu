@@ -49,6 +49,7 @@ data EP
   | ORPHAN
   | PARATAXIS
   | PUNCT
+  | REF -- ^ only allowed in DEPS
   | REPARANDUM
   | ROOT
   | VOCATIVE

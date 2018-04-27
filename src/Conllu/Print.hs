@@ -139,8 +139,10 @@ printDEPS :: DEPS -> String
 printDEPS =
   printList
     (\r ->
-       concat
-         [printID (_head r), ":", printDEPREL (_deprel r) (_subdep r)])
+       intercalate
+         ":"
+         ([printID (_head r), printDEPREL (_deprel r) (_subdep r)] ++
+          fromMaybe [] (_rest r)))
 
 ---
 -- utility printers

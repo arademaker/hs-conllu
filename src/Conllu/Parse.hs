@@ -151,7 +151,7 @@ wordC ixp fop lp upp xpp fsp drp dsp mp = do
     rel mdh mdr = do
       dh <- mdh
       (dr, sdr) <- mdr
-      return $ Rel dh dr sdr
+      return $ Rel dh dr sdr Nothing
 
 emptyField :: Parser (Maybe a)
 -- | parse an empty field.
@@ -218,23 +218,31 @@ deprel :: Parser DEPREL
 -- | parse the DEPREL field.
 deprel = maybeEmpty deprel'
 
+dep :: Parser D.EP
+dep = fmap mkDEP (letters <?> "DEPREL")
+
 deprel' :: Parser (D.EP, Maybe String)
 -- | parse a non-empty DEPREL field.
 deprel' = liftM2 (,) dep subdeprel
   where
-    dep :: Parser D.EP
-    dep = fmap mkDEP (lexeme letters <?> "DEPREL")
     subdeprel :: Parser (Maybe String)
     subdeprel = optional (symbol ":" *> letters <?> "DEPREL subtype")
-    letters = lexeme $ some (letterChar <|> char '.')
 
 deps :: Parser DEPS
 -- | parse the DEPS field.
-deps = listP rels
+deps = listP (eDep `sepBy` symbol "|" <?> "DEPS")
   where
-    rels = fmap (map mkRel) deps'
-    deps' = listPair ":" idW deprel' <?> "DEPS"
-    mkRel (dh, (dr, sdr)) = Rel dh dr sdr
+    eDep = do
+      h <- idW <?> "enhanced dependency HEAD"
+      _ <- sep
+      d <- dep <?> "enhanced dependency DEPREL"
+      restI <-
+        optional
+          (sep *>
+           stringNot "\t| :" `sepBy` sep <?>
+           "enhanced dependency information")
+      return $ Rel h d Nothing restI
+    sep = symbol ":"
 
 misc :: Parser MISC
 -- | parse the MISC field.
@@ -262,6 +270,10 @@ stringWOSpaces = stringNot " \t\n"
 stringWSpaces :: Parser String
 -- | parse a string until a tab or a newline.
 stringWSpaces = stringNot "\t\n"
+
+letters :: Parser String
+-- | parse a string of letters.
+letters = lexeme $ some letterChar
 
 ---
 -- parser combinators
