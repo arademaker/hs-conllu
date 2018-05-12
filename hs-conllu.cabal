@@ -10,7 +10,7 @@ bug-reports:         https://github.com/odanoburu/hs-conllu/issues
 license:             LGPL-3
 license-file:        LICENSE
 author:              bruno cuconato
-maintainer:          bruno cuconato <bcclaro+hsconllu@gmail.com>
+maintainer:          bruno cuconato <bcclaro+haskell+hsconllu@gmail.com>
 category:            Language
 build-type:          Simple
 cabal-version:       >=1.18
