@@ -237,11 +237,11 @@ deps = listP (eDep `sepBy` symbol "|" <?> "DEPS")
       _ <- sep
       d <- dep <?> "enhanced dependency DEPREL"
       restI <-
-        optional
+        fmap UnAS optional
           (sep *>
            stringNot "\t| :" `sepBy` sep <?>
            "enhanced dependency information")
-      return $ Rel h d Nothing restI
+      return $ Rel h d restI
     sep = symbol ":"
 
 misc :: Parser MISC

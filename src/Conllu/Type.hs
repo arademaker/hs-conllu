@@ -38,7 +38,7 @@ type StringPair = (String, String)
 -- ** Words
 -- | represents a word line in a CoNLL-U file. note that we have
 -- collapsed some fields together: 'HEAD' and DEPREL have been
--- combined as a relation type Rel accessible by the '_rel' function;
+-- combined as a relation type 'Rel' accessible by the '_rel' function;
 -- the 'DEPS' field is merely a list of 'Rel'.
 --
 -- a C(oNLL-U)W(ord) may be a simple word, a multi-word token, or an
@@ -126,9 +126,19 @@ data Feat = Feat
 data Rel = Rel
   { _head :: HEAD -- ^ head 'ID'
   , _deprel :: D.EP -- ^ dependency relation type
-  , _subdep :: Maybe String -- ^ dependency relation subtype
-  , _rest :: Maybe [String] -- ^ provisitonal, see issues #23,#17
+  , _subdep :: [SubDep] -- ^ dependency relation subtype and case
+                        -- information, see issues #23,#17
   } deriving (Eq, Show)
+
+-- | enhanced dependency relation representation (check the CoNLL-U documentation!)
+data SubDep = SubT String
+            | CaseS String
+            | CaseI String
+            | UnAS String -- ^ unassigned string, the direct result of
+                          -- the parse, as the parser can't decide to
+                          -- which kind data a string belongs to
+                          -- without external information
+            deriving (Eq,Ord,Show)
 
 type Index   = Int
 -- | 'ID' separator in meta words
