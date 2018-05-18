@@ -2,6 +2,7 @@
 #+TITLE: hs-conllu
 
 [[https://travis-ci.org/odanoburu/hs-conllu][file:https://travis-ci.org/odanoburu/hs-conllu.svg?branch=master]]
+[[http://hackage.haskell.org/package/hs-conllu][file:https://img.shields.io/hackage/v/hs-conllu.svg?style=flt]]
 
 this package provides a validating[fn:1] parser of the [[http://universaldependencies.org/format.html][CoNLL-U format]], along
 with a data model for its constituents. reading, pretty-printing, and
@@ -11,6 +12,8 @@ further processing utilities are being developed and will be placed in
 a separate package.
 
 * installation
+=hs-conllu= is available on [[http://hackage.haskell.org/package/hs-conllu][Hackage]], but if you prefer to install from
+source:
   #+BEGIN_SRC sh
   cd /path/of/choice/
   git clone $REPO_URL
@@ -80,7 +83,7 @@ a separate package.
 
 ** Diffing
    see the =Diff= module Haddock documentation.
- 
+
 * contributing
   I'm a new haskeller, so any help will probably be useful -- even if
   its just a few pointers and comments on how I can improve the
