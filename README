@@ -29,8 +29,8 @@ source:
     stack install --system-ghc
     #+END_SRC
 
-  the library is tested with GHC versions 8.0.2, 8.2.2, and 8.4.1 on
-  Linux and on OSX (thanks Travis!).
+  the library is tested with multiple GHC versions, on Linux and on
+  OSX (thanks Travis!).
 
   if you have problems with the dependency versions, you may try to
   alter them in the cabal file for the version you have. the version
