@@ -1,5 +1,5 @@
 name:                hs-conllu
-version:             0.1.2
+version:             0.1.3
 synopsis:            Conllu validating parser and utils.
 description:         utilities to parse, print, diff, and analyse data in CoNLL-U format.
 extra-doc-files:      README
