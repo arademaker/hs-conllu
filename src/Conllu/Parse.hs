@@ -61,7 +61,7 @@ import           Data.Maybe
 import           Data.Void (Void)
 
 import Text.Megaparsec
-       (ParseError, Parsec, (<?>), (<|>), between, eitherP, endBy1, eof,
+       (ParseError, Parsec, (<?>), (<|>), between, choice, eitherP, endBy1, eof,
         lookAhead, many, option, optional, parse, parseErrorPretty, sepBy,
         sepBy1, skipManyTill, some, takeWhile1P, takeWhileP, try,
         withRecovery)
@@ -156,7 +156,7 @@ wordC ixp fop lp upp xpp fsp drp dsp mp = do
 
 emptyField :: Parser (Maybe a)
 -- | parse an empty field.
-emptyField = symbol "_" *> return Nothing <?> "empty field"
+emptyField = symbol "_" *> return Nothing <?> "empty field (_)"
 
 idW :: Parser ID
 -- | parse the ID field, which might be an integer, a range, or a
@@ -192,10 +192,10 @@ lemma = orEmpty stringWSpaces <?> "LEMMA"
 
 upos :: Parser UPOS
 -- | parse the UPOS field.
-upos = maybeEmpty upos' <?> "UPOS"
+upos = maybeEmpty upos'
   where
     upos' :: Parser U.POS
-    upos' = fmap mkUPOS stringWOSpaces
+    upos' = fmap mkUPOS $ choice $ fmap (string' . show) [U.ADJ .. U.X]
 
 xpos :: Parser XPOS
 -- | parse the XPOS field.
@@ -220,7 +220,7 @@ deprel :: Parser DEPREL
 deprel = maybeEmpty deprel'
 
 dep :: Parser D.EP
-dep = fmap mkDEP (letters <?> "DEPREL")
+dep = fmap mkDEP $ choice $ fmap (string' . show) [D.ACL .. D.XCOMP]
 
 deprel' :: Parser (D.EP, Maybe String)
 -- | parse a non-empty DEPREL field.
