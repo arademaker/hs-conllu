@@ -16,15 +16,16 @@
 module Conllu.DeprelTagset where
 
 data EP
-  = ACL
+  = REF -- ^ only allowed in DEPS
+  | ACL
   | ADVCL
   | ADVMOD
   | AMOD
   | APPOS
   | AUX
   | CASE
-  | CC
   | CCOMP
+  | CC
   | CLF
   | COMPOUND
   | CONJ
@@ -49,7 +50,6 @@ data EP
   | ORPHAN
   | PARATAXIS
   | PUNCT
-  | REF -- ^ only allowed in DEPS
   | REPARANDUM
   | ROOT
   | VOCATIVE
