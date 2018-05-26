@@ -63,7 +63,8 @@ import           Data.Void (Void)
 import Text.Megaparsec
        (ParseError, Parsec, (<?>), (<|>), between, eitherP, endBy1, eof,
         lookAhead, many, option, optional, parse, parseErrorPretty, sepBy,
-        sepBy1, skipManyTill, some, takeWhileP, try, withRecovery)
+        sepBy1, skipManyTill, some, takeWhile1P, takeWhileP, try,
+        withRecovery)
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
 
@@ -261,7 +262,7 @@ listPair sep p q = keyValue sep p q `sepBy1` symbol "|"
 
 stringNot :: String -> Parser String
 -- | parse any chars except the ones provided.
-stringNot s = lexeme . some $ satisfy (`notElem` s)
+stringNot s = lexeme $ takeWhile1P Nothing (`notElem` s)
 
 stringWOSpaces :: Parser String
 -- | parse a string until a space, a tab, or a newline.
