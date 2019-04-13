@@ -1,4 +1,3 @@
--- |
 -- Module      :  Conllu.Parse
 -- Copyright   :  © 2018 bruno cuconato
 -- License     :  LPGL-3
@@ -61,7 +60,8 @@ import           Data.Maybe
 import           Data.Void (Void)
 
 import Text.Megaparsec
-       (ParseError, Parsec, (<?>), (<|>), between, choice, eitherP, endBy1, eof,
+       (ParseError, Parsec, (<?>), (<|>), anySingle, between, choice, 
+        eitherP, endBy1, eof, errorBundlePretty,
         lookAhead, many, option, optional, parse, parseErrorPretty, sepBy,
         sepBy1, skipManyTill, some, takeWhile1P, takeWhileP, try,
         withRecovery)
@@ -91,7 +91,7 @@ rawSentsC sent = between ws eof (e `endBy1` lineFeed)
     e = withRecovery recover (Right <$> sent)
     recover err =
       Left err <$
-      skipManyTill anyChar
+      skipManyTill anySingle
       -- if parser consumes the first newline but can't parse the
       -- second, it breaks; it can't consume the second one, because
       -- that one has to be consumed by the endBy1
@@ -393,7 +393,7 @@ parseConlluWith
 -- | parse a CoNLL-U document using a customized parser.
 parseConlluWith p fp s =
   case parse doc fp s of
-    Left err -> Left $ parseErrorPretty err
+    Left err -> Left $ errorBundlePretty err
     Right d ->
       let (ls, rs) = partitionEithers d
       in if null ls
