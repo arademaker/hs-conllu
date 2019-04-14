@@ -1,4 +1,3 @@
--- |
 -- Module      :  Conllu.Parse
 -- Copyright   :  © 2018 bruno cuconato
 -- License     :  LPGL-3
@@ -61,7 +60,8 @@ import           Data.Maybe
 import           Data.Void (Void)
 
 import Text.Megaparsec
-       (ParseError, Parsec, (<?>), (<|>), between, choice, eitherP, endBy1, eof,
+       (ParseError, Parsec, (<?>), (<|>), anySingle, between, choice, 
+        eitherP, endBy1, eof, errorBundlePretty,
         lookAhead, many, option, optional, parse, parseErrorPretty, sepBy,
         sepBy1, skipManyTill, some, takeWhile1P, takeWhileP, try,
         withRecovery)
@@ -72,7 +72,7 @@ import qualified Text.Megaparsec.Char.Lexer as L
 type Parser = Parsec Void String
 
 -- | Parser raw output
-type RawData t e = [Either (ParseError t e) Sent]
+type RawData = [Either (ParseError String Void) Sent]
 
 -- | DEPREL field type synonym
 type DEPREL = Maybe (D.EP, Maybe String)
@@ -80,18 +80,18 @@ type DEPREL = Maybe (D.EP, Maybe String)
 
 ---
 -- conllu parsers
-rawSents :: Parser (RawData Char Void)
+rawSents :: Parser RawData
 -- | parse CoNLL-U sentences with recovery.
 rawSents = rawSentsC sentence
 
-rawSentsC :: Parser Sent -> Parser (RawData Char Void)
+rawSentsC :: Parser Sent -> Parser RawData
 -- | parse CoNLL-U sentences with recovery, using a custom parser.
 rawSentsC sent = between ws eof (e `endBy1` lineFeed)
   where
     e = withRecovery recover (Right <$> sent)
     recover err =
       Left err <$
-      skipManyTill anyChar
+      skipManyTill anySingle
       -- if parser consumes the first newline but can't parse the
       -- second, it breaks; it can't consume the second one, because
       -- that one has to be consumed by the endBy1
@@ -393,7 +393,7 @@ parseConlluWith
 -- | parse a CoNLL-U document using a customized parser.
 parseConlluWith p fp s =
   case parse doc fp s of
-    Left err -> Left $ parseErrorPretty err
+    Left err -> Left $ errorBundlePretty err
     Right d ->
       let (ls, rs) = partitionEithers d
       in if null ls

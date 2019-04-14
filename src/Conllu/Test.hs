@@ -1,4 +1,4 @@
-module Test where
+module Conllu.Test where
 
 import Conllu.Type
 import Conllu.IO
