@@ -1,61 +1,78 @@
-name:                hs-conllu
-version:             0.1.4
-synopsis:            Conllu validating parser and utils.
-description:         utilities to parse, print, diff, and analyse data in CoNLL-U format.
-extra-doc-files:      README
-                    , CHANGELOG
-                    , TODO
-homepage:            https://github.com/odanoburu/hs-conllu
-bug-reports:         https://github.com/odanoburu/hs-conllu/issues
-license:             LGPL-3
-license-file:        LICENSE
-author:              bruno cuconato
-maintainer:          bruno cuconato <bcclaro+haskell+hsconllu@gmail.com>
-category:            Language
-build-type:          Simple
-cabal-version:       >=1.18
-tested-with:         GHC==8.0.2, GHC==8.2.2, GHC==8.4.2
+cabal-version: 1.12
 
+-- This file has been generated from package.yaml by hpack version 0.31.1.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: ecf66e2909521edd4284de71c6ea3f78aae0f42211287a1f9ab229ff852f7a6a
 
+name:           hs-conllu
+version:        0.1.4
+description:    Please see the README on GitHub at <https://github.com/odanoburu/hs-conllu#readme>
+homepage:       https://github.com/odanoburu/hs-conllu#readme
+bug-reports:    https://github.com/odanoburu/hs-conllu/issues
+author:         bruno cuconato
+maintainer:     bcclaro+haskell@gmail.com
+copyright:      2019 bruno cuconato
+license:        LGPL-3
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README
+    CHANGELOG
+    LICENSE
+    TODO
 
 source-repository head
-  type:              git
-  location:          https://github.com/odanoburu/hs-conllu.git
+  type: git
+  location: https://github.com/odanoburu/hs-conllu
 
 library
-  exposed-modules:     Conllu.Type,
-                       Conllu.UposTagset,
-                       Conllu.DeprelTagset,
-                       Conllu.IO,
-                       Conllu.Parse,
-                       Conllu.Diff,
-                       Conllu.Utils,
-                       Conllu.Print
---  other-modules: Conllu.Utils
-  -- other-extensions:
-  build-depends:       base >=4.9 && <5,
-                       containers >0.5.8 && <0.6,
-                       directory ==1.3.*,
-                       filepath ==1.4.*,
-                       megaparsec <0.8,
-                       void <1
-  hs-source-dirs:      src
-  default-language:    Haskell2010
+  exposed-modules:
+      Conllu.DeprelTagset
+      Conllu.Diff
+      Conllu.IO
+      Conllu.Parse
+      Conllu.Print
+      Conllu.Test
+      Conllu.Type
+      Conllu.UposTagset
+      Conllu.Utils
+      Main
+  other-modules:
+      Paths_hs_conllu
+  hs-source-dirs:
+      src
+  build-depends:
+      base >=4.9 && <5
+    , containers >0.5.8 && <0.7
+    , directory ==1.3.*
+    , filepath ==1.4.*
+    , megaparsec ==7.*
+    , void <1
+  default-language: Haskell2010
 
 executable hs-conllu
-  hs-source-dirs:     src
-  main-is:            Main.hs
-  default-language:   Haskell2010
-  build-depends:      base >= 4.9 && <5,
-                      containers >0.5.8 && <0.6,
-                      directory ==1.3.*,
-                      filepath ==1.4.*,
-                      megaparsec ==6.*
-  other-modules:      Conllu.Type,
-                      Conllu.UposTagset,
-                      Conllu.DeprelTagset,
-                      Conllu.Diff,
-                      Conllu.IO,
-                      Conllu.Parse,
-                      Conllu.Utils,
-                      Conllu.Print
+  main-is: Main.hs
+  other-modules:
+      Conllu.DeprelTagset
+      Conllu.Diff
+      Conllu.IO
+      Conllu.Parse
+      Conllu.Print
+      Conllu.Test
+      Conllu.Type
+      Conllu.UposTagset
+      Conllu.Utils
+      Paths_hs_conllu
+  hs-source-dirs:
+      src
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.9 && <5
+    , containers >0.5.8 && <0.7
+    , directory ==1.3.*
+    , filepath ==1.4.*
+    , megaparsec ==7.*
+    , void <1
+  default-language: Haskell2010

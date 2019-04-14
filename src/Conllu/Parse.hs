@@ -72,7 +72,7 @@ import qualified Text.Megaparsec.Char.Lexer as L
 type Parser = Parsec Void String
 
 -- | Parser raw output
-type RawData t e = [Either (ParseError t e) Sent]
+type RawData = [Either (ParseError String Void) Sent]
 
 -- | DEPREL field type synonym
 type DEPREL = Maybe (D.EP, Maybe String)
@@ -80,11 +80,11 @@ type DEPREL = Maybe (D.EP, Maybe String)
 
 ---
 -- conllu parsers
-rawSents :: Parser (RawData Char Void)
+rawSents :: Parser RawData
 -- | parse CoNLL-U sentences with recovery.
 rawSents = rawSentsC sentence
 
-rawSentsC :: Parser Sent -> Parser (RawData Char Void)
+rawSentsC :: Parser Sent -> Parser RawData
 -- | parse CoNLL-U sentences with recovery, using a custom parser.
 rawSentsC sent = between ws eof (e `endBy1` lineFeed)
   where
