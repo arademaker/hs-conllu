@@ -38,11 +38,10 @@ matrix:
 
 
 before_install:
-- mkdir -p ~/.local/bin
+- travis_retry curl -sSL https://get.haskellstack.org/ | sh
+- stack build
+- stack upgrade
 - export PATH=$HOME/.local/bin:$PATH
-- travis_retry curl -L https://get.haskellstack.org/stable/linux-x86_64.tar.gz | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
-- stack config set system-ghc --global true
-- export PATH=/opt/ghc/$GHCVER/bin:$PATH
 
 addons:
   apt:
