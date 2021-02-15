@@ -1,5 +1,5 @@
 name:                hs-conllu
-version:             0.1.4
+version:             0.1.5
 synopsis:            Conllu validating parser and utils.
 description:         utilities to parse, print, diff, and analyse data in CoNLL-U format.
 extra-doc-files:      README
@@ -34,10 +34,10 @@ library
 --  other-modules: Conllu.Utils
   -- other-extensions:
   build-depends:       base >=4.9 && <5,
-                       containers >0.5.8 && <0.6,
+                       containers >0.5.8 && <0.7,
                        directory ==1.3.*,
                        filepath ==1.4.*,
-                       megaparsec ==6.*,
+                       megaparsec ==9.*,
                        void <1
   hs-source-dirs:      src
   default-language:    Haskell2010
@@ -47,10 +47,10 @@ executable hs-conllu
   main-is:            Main.hs
   default-language:   Haskell2010
   build-depends:      base >= 4.9 && <5,
-                      containers >0.5.8 && <0.6,
+                      containers >0.5.8 && <0.7,
                       directory ==1.3.*,
                       filepath ==1.4.*,
-                      megaparsec ==6.*
+                      megaparsec ==9.*
   other-modules:      Conllu.Type,
                       Conllu.UposTagset,
                       Conllu.DeprelTagset,

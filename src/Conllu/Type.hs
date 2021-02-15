@@ -142,7 +142,7 @@ _dep w = Just . _deprel =<< _rel w
 
 depIs :: D.EP -> CW SW -> Bool
 -- | check if DEP is the one provided.
-depIs d = maybe False (\d' -> d == d') . _dep
+depIs d = maybe False (d ==) . _dep
 
 ---
 -- ** constructor functions
