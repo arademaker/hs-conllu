@@ -1,55 +1,40 @@
-# This is the complex Travis configuration, which is intended for use
-# on open source libraries which need compatibility across multiple GHC
-# versions, must work with cabal-install, and should be
-# cross-platform. For more information and other options, see:
+# This is the simple Travis configuration, which is intended for use
+# on applications which do not require cross-platform and
+# multiple-GHC-version support. For more information and other
+# options, see:
 #
 # https://docs.haskellstack.org/en/stable/travis_ci/
 #
+# Copy these contents into the root directory of your Github project in a file
+# named .travis.yml
 
-# Use new container infrastructure to enable caching
-sudo: false
+# Choose a build environment
+dist: xenial
+
+# Do not choose a language; we provide our own build tools.
+language: generic
 
 # Caching so the next build will be fast too.
 cache:
   directories:
-  - $HOME/.ghc
-  - $HOME/.cabal
   - $HOME/.stack
 
-  
-# The different configurations we want to test. We have BUILD=cabal
-# which uses cabal-install, and BUILD=stack which uses Stack. More
-# documentation on each of those below.
-#
-# We set the compiler values here to tell Travis to use a different
-# cache file per set of arguments.
-
-matrix:
-  include:
-  - env: GHCVER=8.10.13 STACK_YAML=stack.yaml
-    addons:
-      apt:
-        sources:
-        - hvr-ghc
-        packages:
-        - ghc-8.10.13
-  allow_failures:
-    - env: GHCVER=head STACK_YAML=stack-head.yaml
-
-
-before_install:
-- travis_retry curl -sSL https://get.haskellstack.org/ | sh
-- stack build
-- stack upgrade
-- export PATH=$HOME/.local/bin:$PATH
-
+# Ensure necessary system libraries are present
 addons:
   apt:
-    sources:
-      - hvr-ghc
     packages:
-      - ghc-8.10.13
+      - libgmp-dev
+
+before_install:
+# Download and unpack the stack executable
+- mkdir -p ~/.local/bin
+- export PATH=$HOME/.local/bin:$PATH
+- travis_retry curl -L https://get.haskellstack.org/stable/linux-x86_64.tar.gz | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
+
+install:
+# Build dependencies
+- stack --no-terminal --install-ghc test --only-dependencies
 
 script:
-  - stack --no-terminal --skip-ghc-check test
-  
+# Build the package, its tests, and its docs and run the tests
+- stack --no-terminal test --haddock --no-haddock-deps
