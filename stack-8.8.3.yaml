@@ -1,0 +1,6 @@
+flags: {}
+packages:
+- '.'
+resolver: lts-16.11
+extra-deps:
+  - megaparsec-9.0.1
