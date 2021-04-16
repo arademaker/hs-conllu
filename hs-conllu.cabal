@@ -1,6 +1,6 @@
 cabal-version:       2.4
 name:                hs-conllu
-version:             0.1.4
+version:             0.1.5
 synopsis:            Conllu validating parser and utils.
 description:         utilities to parse, print, diff, and analyse data in CoNLL-U format.
 homepage:            https://github.com/odanoburu/hs-conllu
@@ -68,3 +68,11 @@ executable hs-conllu
   ghc-options:         -threaded
                        -rtsopts
                        -with-rtsopts=-N
+  other-modules: Conllu.DeprelTagset,
+                 Conllu.Diff,
+                 Conllu.IO,
+                 Conllu.Parse,
+                 Conllu.Print,
+                 Conllu.Type,
+                 Conllu.UposTagset,
+                 Conllu.Utils

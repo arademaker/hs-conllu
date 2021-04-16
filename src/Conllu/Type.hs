@@ -87,6 +87,7 @@ instance Ord ID where
   compare = idOrd
     where
       idOrd :: ID -> ID -> Ordering
+      idOrd (SID x) (SID y) = compare x y
       idOrd id1 id2 =
         let c = comparing fstIx id1 id2
         in case c of
@@ -142,7 +143,7 @@ _dep w = Just . _deprel =<< _rel w
 
 depIs :: D.EP -> CW SW -> Bool
 -- | check if DEP is the one provided.
-depIs d = maybe False (\d' -> d == d') . _dep
+depIs d = maybe False (d ==) . _dep
 
 ---
 -- ** constructor functions

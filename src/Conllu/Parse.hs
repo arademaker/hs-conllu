@@ -60,19 +60,15 @@ import           Data.Either
 import           Data.Maybe
 import           Data.Void (Void)
 
-import Text.Megaparsec
-       (ParseError, Parsec, (<?>), (<|>), between, choice, eitherP, endBy1, eof,
-        lookAhead, many, option, optional, parse, parseErrorPretty, sepBy,
-        sepBy1, skipManyTill, some, takeWhile1P, takeWhileP, try,
-        withRecovery)
+import qualified Text.Megaparsec as TM
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
 
 -- | Parser type synonym
-type Parser = Parsec Void String
+type Parser = TM.Parsec Void String
 
 -- | Parser raw output
-type RawData t e = [Either (ParseError t e) Sent]
+type RawData t e = [Either (TM.ParseError t e) Sent]
 
 -- | DEPREL field type synonym
 type DEPREL = Maybe (D.EP, Maybe String)
@@ -80,42 +76,40 @@ type DEPREL = Maybe (D.EP, Maybe String)
 
 ---
 -- conllu parsers
-rawSents :: Parser (RawData Char Void)
+rawSents :: Parser (RawData String Void)
 -- | parse CoNLL-U sentences with recovery.
 rawSents = rawSentsC sentence
 
-rawSentsC :: Parser Sent -> Parser (RawData Char Void)
+rawSentsC :: Parser Sent -> Parser (RawData String Void)
 -- | parse CoNLL-U sentences with recovery, using a custom parser.
-rawSentsC sent = between ws eof (e `endBy1` lineFeed)
+rawSentsC sent = TM.between ws TM.eof (TM.endBy1 e lineFeed)
   where
-    e = withRecovery recover (Right <$> sent)
+    e = TM.withRecovery recover (Right <$> sent)
     recover err =
       Left err <$
-      skipManyTill anyChar
+      TM.skipManyTill TM.anySingle
       -- if parser consumes the first newline but can't parse the
       -- second, it breaks; it can't consume the second one, because
       -- that one has to be consumed by the endBy1
-      (try $ lineFeed *> lookAhead lineFeed)
+      (TM.try $ lineFeed *> TM.lookAhead lineFeed)
 
 lineFeed :: Parser ()
 -- | parse a blank line.
-lineFeed = lexeme . void $ newline -- spaces shouldn't exist, but no
-                                    -- problem being lax here
+lineFeed = lexeme . void $ newline -- Spaces shouldn't exist, but no problem being lax here
 
 sentence :: Parser Sent
 -- | the default sentence parser.
 sentence = sentenceC comment word
 
-sentenceC :: Parser Comment -> Parser (CW AW)
-  -> Parser Sent
+sentenceC :: Parser Comment -> Parser (CW AW) -> Parser Sent
 -- | the customizable sentence parser.
-sentenceC c t = liftM2 Sent (many c) (some t)
+sentenceC c t = liftM2 Sent (TM.many c) (TM.some t)
 
 comment :: Parser Comment
 -- | parse a comment.
 comment =
-  (symbol "#" <?> "comment starter") *> commentPair <*
-  lineFeed <?> "comment content"
+  (symbol "#" TM.<?> "comment starter") *> commentPair <*
+  lineFeed TM.<?> "comment content"
 
 word :: Parser (CW AW)
 -- | the default word parser.
@@ -135,19 +129,19 @@ wordC ::
   -> Parser (CW AW)
 -- | the customizable token parser.
 wordC ixp fop lp upp xpp fsp drp dsp mp = do
-  i <- ixp <* tab
-  mf <- fop <* tab
-  ml <- lp <* tab
+  i   <- ixp <* tab
+  mf  <- fop <* tab
+  ml  <- lp  <* tab
   mup <- upp <* tab
   mxp <- xpp <* tab
   mfs <- fsp <* tab
   mdh <- dhp <* tab
   mdr <- drp <* tab
-  ds <- dsp <* tab
-  mm <- mp <* lineFeed
+  ds  <- dsp <* tab
+  mm  <- mp  <* lineFeed
   return $ mkAW i mf ml mup mxp mfs (rel mdh mdr) ds mm
   where
-    dhp = maybeEmpty ixp <?> "HEAD"
+    dhp = maybeEmpty ixp TM.<?> "HEAD"
     rel :: Maybe ID -> DEPREL -> Maybe Rel
     rel mdh mdr = do
       dh <- mdh
@@ -156,14 +150,14 @@ wordC ixp fop lp upp xpp fsp drp dsp mp = do
 
 emptyField :: Parser (Maybe a)
 -- | parse an empty field.
-emptyField = symbol "_" *> return Nothing <?> "empty field (_)"
+emptyField = symbol "_" *> return Nothing TM.<?> "empty field (_)"
 
 idW :: Parser ID
 -- | parse the ID field, which might be an integer, a range, or a
 -- decimal.
 idW = do
   ix <- index
-  mix <- optional metaIndex <?> "meta token ID"
+  mix <- TM.optional metaIndex TM.<?> "meta token ID"
   return $
     case mix of
       Nothing             -> SID ix
@@ -172,10 +166,10 @@ idW = do
   where
     index :: Parser Index
     index = do
-      ix <- some digitChar <?> "ID"
+      ix <- TM.some digitChar TM.<?> "ID"
       return (read ix :: Int)
     indexSep :: Parser (Either IxSep IxSep)
-    indexSep = eitherP (char '-') (char '.') <?> "meta separator"
+    indexSep = TM.eitherP (char '-') (char '.') TM.<?> "meta separator"
     metaIndex :: Parser (Either IxSep IxSep, Index)
     metaIndex = do
       sep <- indexSep
@@ -184,85 +178,85 @@ idW = do
 
 form :: Parser FORM
 -- | parse the FORM field.
-form = orEmpty stringWSpaces <?> "FORM"
+form = orEmpty stringWSpaces TM.<?> "FORM"
 
 lemma :: Parser LEMMA
 -- | parse the LEMMA field.
-lemma = orEmpty stringWSpaces <?> "LEMMA"
+lemma = orEmpty stringWSpaces TM.<?> "LEMMA"
 
 upos :: Parser UPOS
 -- | parse the UPOS field.
 upos = maybeEmpty upos'
   where
     upos' :: Parser U.POS
-    upos' = fmap mkUPOS $ choice $ fmap (string' . show) [U.ADJ .. U.X]
+    upos' = fmap mkUPOS $ TM.choice $ fmap (string' . show) [U.ADJ .. U.X]
 
 xpos :: Parser XPOS
 -- | parse the XPOS field.
-xpos = maybeEmpty stringWOSpaces <?> "XPOS"
+xpos = maybeEmpty stringWOSpaces TM.<?> "XPOS"
 
 feats :: Parser FEATS
 -- | parse the FEATS field.
-feats = listP (feat `sepBy` symbol "|" <?> "FEATS")
+feats = listP (feat `TM.sepBy` symbol "|" TM.<?> "FEATS")
   where
     feat = do
-      k  <- lexeme (some alphaNumChar <?> "feature key")
+      k  <- lexeme (TM.some alphaNumChar TM.<?> "feature key")
       ft <-
-        optional $
-        between (symbol "[") (symbol "]") (some alphaNumChar)
+        TM.optional $
+        TM.between (symbol "[") (symbol "]") (TM.some alphaNumChar)
       _  <- symbol "="
-      vs <- fvalue `sepBy1` symbol ","
+      vs <- fvalue `TM.sepBy1` symbol ","
       return $ Feat k vs ft
-    fvalue = lexeme (some alphaNumChar <?> "feature value")
+    fvalue = lexeme (TM.some alphaNumChar TM.<?> "feature value")
 
 deprel :: Parser DEPREL
 -- | parse the DEPREL field.
 deprel = maybeEmpty deprel'
 
 dep :: Parser D.EP
-dep = fmap mkDEP $ choice $ fmap (string' . show) [D.ACL .. D.XCOMP]
+dep = fmap mkDEP $ TM.choice $ fmap (string' . show) [D.ACL .. D.XCOMP]
 
 deprel' :: Parser (D.EP, Maybe String)
 -- | parse a non-empty DEPREL field.
 deprel' = liftM2 (,) dep subdeprel
   where
     subdeprel :: Parser (Maybe String)
-    subdeprel = optional (symbol ":" *> letters <?> "DEPREL subtype")
+    subdeprel = TM.optional (symbol ":" *> letters TM.<?> "DEPREL subtype")
 
 deps :: Parser DEPS
 -- | parse the DEPS field.
-deps = listP (eDep `sepBy` symbol "|" <?> "DEPS")
+deps = listP (eDep `TM.sepBy` symbol "|" TM.<?> "DEPS")
   where
     eDep = do
-      h <- idW <?> "enhanced dependency HEAD"
+      h <- idW TM.<?> "enhanced dependency HEAD"
       _ <- sep
-      d <- dep <?> "enhanced dependency DEPREL"
+      d <- dep TM.<?> "enhanced dependency DEPREL"
       restI <-
-        optional
+        TM.optional
           (sep *>
-           stringNot "\t| :" `sepBy` sep <?>
+           stringNot "\t| :" `TM.sepBy` sep TM.<?>
            "enhanced dependency information")
       return $ Rel h d Nothing restI
     sep = symbol ":"
 
 misc :: Parser MISC
 -- | parse the MISC field.
-misc = orEmpty stringWSpaces <?> "MISC"
+misc = orEmpty stringWSpaces TM.<?> "MISC"
 
 ---
 -- utility parsers
 commentPair :: Parser Comment
 -- | parse a comment pair.
 commentPair =
-  keyValue "=" (stringNot "=\n\t") (option "" stringWSpaces)
+  keyValue "=" (stringNot "=\n\t") (TM.option "" stringWSpaces)
 
 listPair :: String -> Parser a -> Parser b -> Parser [(a, b)]
 -- | parse a list of pairs.
-listPair sep p q = keyValue sep p q `sepBy1` symbol "|"
+listPair sep p q = keyValue sep p q `TM.sepBy1` symbol "|"
 
 stringNot :: String -> Parser String
 -- | parse any chars except the ones provided.
-stringNot s = lexeme $ takeWhile1P Nothing (`notElem` s)
+stringNot s = lexeme $ TM.takeWhile1P Nothing (`notElem` s)
 
 stringWOSpaces :: Parser String
 -- | parse a string until a space, a tab, or a newline.
@@ -274,7 +268,7 @@ stringWSpaces = stringNot "\t\n"
 
 letters :: Parser String
 -- | parse a string of letters.
-letters = lexeme $ some letterChar
+letters = lexeme $ TM.some letterChar
 
 ---
 -- parser combinators
@@ -282,7 +276,7 @@ keyValue :: String -> Parser a -> Parser b -> Parser (a, b)
 -- | parse a (key, value) pair.
 keyValue sep p q = do
   key   <- p
-  _     <- optional $ symbol sep
+  _     <- TM.optional $ symbol sep
   value <- q
   return (key, value)
 
@@ -302,7 +296,7 @@ keyValue sep p q = do
 maybeEmpty :: Parser a -> Parser (Maybe a)
 -- | a parser combinator for parsers that won't parse "_" (e.g., as
 -- 'lemma' would).
-maybeEmpty p = emptyField <|> fmap Just p
+maybeEmpty p = emptyField TM.<|> fmap Just p
 
 orEmpty :: Parser String -> Parser (Maybe String)
 -- | a parser combinator for parsers that may parse "_".
@@ -328,7 +322,7 @@ lexeme :: Parser a -> Parser a
 lexeme = L.lexeme ws
 
 ws :: Parser ()
-ws = void $ takeWhileP (Just "space") (== ' ')
+ws = void $ TM.takeWhileP (Just "space") (== ' ')
 
 ---
 -- customizable parser
@@ -369,7 +363,7 @@ parserC :: ParserC -> Parser Sent
 -- @
 parserC p =
   let i  = _idP p
-      f = _formP p
+      f  = _formP p
       l  = _lemmaP p
       up = _upostagP p
       xp = _xpostagP p
@@ -392,15 +386,16 @@ parseConlluWith
   -> Either String Doc
 -- | parse a CoNLL-U document using a customized parser.
 parseConlluWith p fp s =
-  case parse doc fp s of
-    Left err -> Left $ parseErrorPretty err
-    Right d ->
+  case TM.parse doc fp s of
+    Left err -> Left $ TM.errorBundlePretty err
+    Right d  ->
       let (ls, rs) = partitionEithers d
       in if null ls
            then Right rs
-           else Left $ concatMap parseErrorPretty ls
+           else Left $ concatMap TM.parseErrorPretty ls
   where
     doc = rawSentsC p
+
 
 parseConllu :: FilePath -> String -> Either String Doc
 -- | parse a CoNLL-U document using the default parser.
