@@ -7,7 +7,7 @@
 * 0.1.0 -- 2018-04-03
 - change Type module a lot -- basically breaks all existing code
 - remove Data.* modules, they should be in a separate package (and
-  will have to be rewritten) 
+  will have to be rewritten)
 - new type for words allows us to type-check simple words, multi-word
   tokens, and empty nodes
 - remove Data.* modules, they should be in a separate package (and
@@ -16,3 +16,6 @@
   #7)
 - add requested parsing and printing functions (closes #9)
 - add recovery function to parser (closes #18)
+* 0.1.5 <2021-04-17 Sat>
+- fix Ord instance for ID
+- add stack.yaml files for different GHC versions
