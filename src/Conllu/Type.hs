@@ -83,6 +83,7 @@ data ID -- | Word ID field.
         Index -- ^ empty node ID is a decimal
   deriving (Eq, Show)
 
+
 instance Ord ID where
   compare = idOrd
     where
@@ -143,7 +144,7 @@ _dep w = Just . _deprel =<< _rel w
 
 depIs :: D.EP -> CW SW -> Bool
 -- | check if DEP is the one provided.
-depIs d = maybe False (d ==) . _dep
+depIs d = (Just d ==) . _dep
 
 ---
 -- ** constructor functions
