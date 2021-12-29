@@ -214,7 +214,7 @@ deprel :: Parser DEPREL
 deprel = maybeEmpty deprel'
 
 dep :: Parser D.EP
-dep = fmap mkDEP $ TM.choice $ fmap (string' . show) [D.ACL .. D.XCOMP]
+dep = fmap mkDEP $ TM.choice $ fmap (string' . show) [D.REF .. D.XCOMP]
 
 deprel' :: Parser (D.EP, Maybe String)
 -- | parse a non-empty DEPREL field.
