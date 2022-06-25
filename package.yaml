@@ -1,0 +1,71 @@
+name:                hs-conllu
+version:             0.1.6
+synopsis:            Conllu validating parser and utils.
+description:         utilities to parse, print, diff, and analyse data in CoNLL-U format.
+homepage:            https://github.com/odanoburu/hs-conllu
+bug-reports:         https://github.com/odanoburu/hs-conllu/issues
+license:             LGPL-3.0-only
+license-file:        LICENSE
+author:              bruno cuconato
+maintainer:          bruno cuconato <bcclaro+haskell+hsconllu@gmail.com>
+copyright:           2021 bruno cuconato
+build-type:          Simple
+extra-doc-files:
+  - README
+  - CHANGELOG
+tested-with:   ghc == 9.2.2
+
+verbatim:
+  cabal-version: 2.0
+
+ghc-options:
+  - -Wall
+  - -Wcompat
+  - -Widentities
+  - -Wincomplete-uni-patterns
+  - -Wincomplete-record-updates
+
+default-extensions:
+  - OverloadedStrings
+  - LambdaCase
+#  - NoImplicitPrelude
+
+dependencies:
+  - aeson
+  - base >= 4.15 && < 5
+  - bytestring
+  - containers
+  - directory
+  - filepath
+  - megaparsec
+  - mtl
+  - optparse-applicative
+  - scientific
+  - string-interpolate
+  - text
+  - text-conversions
+  - text-show
+  - unordered-containers
+  - vector
+
+library:
+  source-dirs:   src
+  other-modules: []
+  exposed-modules:
+  - Conllu.DeprelTagset
+  - Conllu.Diff
+  - Conllu.IO
+  - Conllu.Parse
+  - Conllu.Print
+  - Conllu.Test
+  - Conllu.Type
+  - Conllu.UposTagset
+  - Conllu.Utils
+
+executables:
+  hs-conllu:
+    main:          Main.hs
+    source-dirs:   app1
+    dependencies:
+      - hs-conllu
+
