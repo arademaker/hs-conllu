@@ -1,4 +1,5 @@
--- |
+{-# LANGUAGE OverloadedStrings #-}
+-- -- |
 -- Module      :  Conllu.Diff
 -- Copyright   :  © 2018 bruno cuconato
 -- License     :  LPGL-3
@@ -23,10 +24,11 @@ import Conllu.Type
 import Conllu.Utils
 
 import Data.Maybe
-import Data.Ord
+import Data.Ord (comparing)
+import Data.Text (unpack) 
 
 ---
--- * type synonims
+-- * type synonyms
 -- | CoNLL-U field diff.
 type FDiff = StringPair
 
@@ -45,7 +47,7 @@ diffW = any isJust . printFieldDiffs
 
 diffWs :: [CW a] -> [CW a] -> [WDiff a]
 -- | filters the different word pairs.
-diffWs ws1 ws2 = filter diffW $ zip ws1 ws2
+diffWs ws1 ws2 = Prelude.filter diffW $ zip ws1 ws2
 
 diffS :: (Sent, Sent) -> SDiff AW
 -- | diffs the sentence pair's words.
@@ -79,8 +81,10 @@ sentId :: Sent -> Maybe Index
 -- | try to find an index in a sentence's metadata looking for
 -- 'sent_id = n'.
 sentId s =
-  let mi = lookup "sent_id " $ _meta s
-      i = fromMaybe "0" mi
+--  let myHashMap = fromList $ _meta s
+--      mi = myHashMap !? "sent_id"
+  let mi = lookup "sent_id" $ _meta s
+      i = unpack $ fromMaybe "0" mi
   in safeRead i :: Maybe Index
 
 pairSents :: [Sent] -> [Sent] -> [(Sent, Sent)]
@@ -89,7 +93,7 @@ pairSents = pairSentsBy $ comparing sentId
 
 ---
 -- * printing functions
-printFieldDiffs :: WDiff a -> [Maybe StringPair]
+printFieldDiffs :: WDiff a -> [Maybe (String, String)]
 -- | list of maybe differing fields in a pair of words.
 printFieldDiffs (w1, w2) = fmap (diffField w1 w2) pfs
   where
@@ -110,14 +114,14 @@ printFieldDiffs (w1, w2) = fmap (diffField w1 w2) pfs
       , showM . _misc
       ]
 
-printWDiff :: WDiff a -> [StringPair]
+printWDiff :: WDiff a -> [(String, String)]
 -- | list of differing fields in a pair of words.
 printWDiff = catMaybes . printFieldDiffs
 
-printSDiff :: SDiff a -> [[StringPair]]
+printSDiff :: SDiff a -> [[(String,String)]]
 -- | list of differing words in a sentence.
 printSDiff = fmap printWDiff
 
-printDDiff :: DDiff a -> [[[StringPair]]]
+printDDiff :: DDiff a -> [[[(String,String)]]]
 -- | list of lists of differing words in sentences.
 printDDiff = fmap printSDiff

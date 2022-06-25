@@ -13,24 +13,24 @@
 -- import qualified Conllu.UposTagset as U
 -- @
 
-module Conllu.UposTagset where
+module Conllu.UposTagset where  
 
 data POS
-  = ADJ
-  | ADP
-  | ADV
-  | AUX
-  | CCONJ
-  | DET
-  | INTJ
-  | NOUN
-  | NUM
-  | PART
-  | PRON
-  | PROPN
-  | PUNCT
-  | SCONJ
-  | SYM
-  | VERB
-  | X
-  deriving (Enum, Eq, Read, Show)
+  = ADJ   --  adjective
+  | ADP   --  adposition
+  | ADV   --  adverb
+  | AUX   --  auxiliary
+  | CCONJ --  coordinating conjunction
+  | DET   --  determiner
+  | INTJ  --  interjection
+  | NOUN  --  noun
+  | NUM   --  numeral
+  | PART  --  particle
+  | PRON  --  pronoun
+  | PROPN --  proper noun
+  | PUNCT --  punctuation
+  | SCONJ --  subordinating conjunction
+  | SYM   --  symbol
+  | VERB  --  verb
+  | X     --  other
+ deriving (Enum, Eq, Read, Show ) 
