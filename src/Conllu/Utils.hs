@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 -- |
 -- Module      :  Conllu.Utils
 -- Copyright   :  © 2018 bruno cuconato
@@ -9,22 +10,39 @@
 --
 -- the library's utility functions.
 
+-- TODO add export List
+
 module Conllu.Utils where
 
-import Control.Exception.Base
-import Data.Char
-import Data.Maybe
+
+-- import           Control.Exception.Base
+-- import           Data.Char
+import           Data.Maybe
+-- import qualified Data.Text              as T
 
 ---
 -- char functions
+-- TODO (map toUpper doesn’t work for Unicode because the result could have a different length)
+
+{-
 upcaseStr :: String -> String
 upcaseStr = map toUpper
 
 downcaseStr :: String -> String
 downcaseStr = map toLower
 
+
+upcaseStr' :: Text -> Text
+upcaseStr' =  toUpper
+
+downcaseStr' :: Text -> Text
+downcaseStr' =  toLower
+-}
+
 ---
 -- assertions
+
+{-
 assNothing :: Maybe a -> Bool -> Bool
 assNothing m = assert (isNothing m)
 
@@ -33,6 +51,7 @@ assSomething m = assert (isJust m)
 
 assNull :: [a] -> Bool -> Bool
 assNull l = assert (null l)
+-}
 
 ---
 -- function tools
@@ -50,7 +69,7 @@ consIf p a as =
 ---
 -- safe functions
 safehead :: [a] -> Maybe a
-safehead [] = Nothing
+safehead []    = Nothing
 safehead (x:_) = Just x
 
 safeRead :: Read a => String -> Maybe a

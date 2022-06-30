@@ -9,19 +9,30 @@
 --
 -- Defines major IO functions.
 
-module Conllu.IO where
+module Conllu.IO
+(
+  readAndPrintConllu,
+  diffConllu,
+  readDirectory,
+  readConlluFile
+)
+where
 
 ---
 -- imports
-import Conllu.Type
-import Conllu.Utils
-import Conllu.Parse
-import Conllu.Print
-import Conllu.Diff
+import Conllu.Type (Doc, Sent)
+import Conllu.Utils (if')
+import Conllu.Parse (Parser, sentence, parseConlluWith)
+import Conllu.Print (printDoc)
+import Conllu.Diff (diffSs, printDDiff)
 
-import System.Directory
-import System.FilePath
+import System.Directory (listDirectory, doesFileExist, doesDirectoryExist) --, getDirectoryContents)
+import System.FilePath ((</>))  -- Combine two paths with a path separator
 
+-- import Control.Monad (forM) --GVF added for RWH getRecursiveContents at end
+import Data.Functor (($>))
+import qualified Data.Text.IO as TIO
+-- import qualified Data.Text as T
 
 -- * read functions
 
@@ -32,9 +43,9 @@ import System.FilePath
 readConlluFileWith :: Parser Sent -> FilePath -> IO Doc
 -- | reads a file with a customized parser.
 readConlluFileWith p f = do
-  ds <- readFile f
+  ds <- TIO.readFile f
   case parseConlluWith p f ds of
-    Left err -> putStr err *> return []
+    Left err -> putStr err $> []
     Right d -> return d
 
 readDirectoryWith :: Parser Sent -> FilePath -> IO [Doc]
@@ -70,14 +81,14 @@ readConllu = readConlluWith sentence
 -- * write
 writeConlluFile :: FilePath -> Doc -> IO ()
 -- | writes a CoNLL-U file to disk.
-writeConlluFile fp = writeFile fp . printDoc
+writeConlluFile fp = TIO.writeFile fp . printDoc
 
 ---
 -- * print
 readAndPrintConllu :: FilePath -> IO ()
 -- | reads and prints the CoNLL-U files given.
 readAndPrintConllu fp = do
-  readConlluFile fp >>= putStr . printDoc
+  readConlluFile fp >>= TIO.putStrLn . printDoc
   return ()
 
 ---

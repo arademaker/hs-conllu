@@ -9,151 +9,119 @@
 --
 -- prints CoNLL-U.
 
+{-# LANGUAGE OverloadedStrings #-}
 module Conllu.Print
-  ( printDoc
-  , printSent )
 where
 
-import qualified Conllu.DeprelTagset as D
 import           Conllu.Type
-import           Conllu.Utils
-
-import           Data.List
-import           Data.Maybe
-import           Data.Semigroup
-import           Data.Monoid (Monoid(mempty, mappend))
-
--- TODO: use some kind of bi-directional thing to derive this module
-
--- | Functional list type from LYHGG, see HUGHES, RJM. "A novel
--- representation of lists and its application to the function
--- 'reverse'"
-newtype FList a = FList { getFList :: [a] -> [a] }
-
-instance Semigroup (FList a) where
-  (FList f) <> (FList g) = FList (f . g)
-
-instance Monoid (FList a) where
-  mempty = FList (\xs -> [] ++ xs)
-  a `mappend` b = a <> b
-
-toFList :: [a] -> FList a
-toFList xs = FList (xs++)
-
-fromFList :: FList a -> [a]
-fromFList (FList f) = f []
+import           Data.List  (group, transpose ) --, concat)
+import           Data.Maybe (fromMaybe, fromJust) --, listToMaybe)
+import qualified Data.Text      as T
 
 ---
 -- printing
-printDoc :: Doc -> String
--- | prints a list of sentences to a string.
-printDoc =
-  fromFList . mconcat . map (\s -> printSent' s `mappend` diffLSpace)
+printDoc :: Doc -> T.Text
+-- | prepares a list of sentences for printing:
+printDoc doc =  T.intercalate "\n" $ T.intercalate "\t" <$> (concat $ printSent <$> doc) 
 
-printSent :: Sent -> String
--- | prints a sentence to a string.
-printSent = fromFList . printSent'
+printSent :: Sent -> [[T.Text]]
+-- | prepares a sentence for printing
+-- | transpose regroups the sentence fields into a list of word lines
+--   Sentences consist of one or more word lines, and word lines contain the fields in printWords
+printSent sentence =  group     (printComment <$> _meta  sentence)
+                   <> transpose (printWords    $  _words sentence)
 
-printSent' :: Sent -> FList Char
-printSent' ss =
-  mconcat
-    [ printComments (_meta ss)
-    , diffLSpace
-    , printWs (_words ss)
-    ]
+printComment :: Comment -> T.Text
+-- | reconstructs a comment line from its parsed representation
+--   "# first comment < = second comment>"
+-- TODO GVF fix comment parse -- should not include space 
+printComment comment = "# "
+                     <> fst comment
+                     <> if T.null $ snd comment
+                        then ""
+                        else " = "
+                     <> snd comment
 
-printComments :: [Comment] -> FList Char
-printComments =
-  toFList .
-  intercalate "\n" .
-  map
-    (\(c1, c2) ->
-       concat
-         [ "# "
-         , c1
-         , if null c2
-             then ""
-             else "= " ++ c2
-         ])
-
-printWs :: [CW a] -> FList Char
-printWs = foldr (\w dl -> mconcat [printW w, diffLSpace, dl]) mempty
-
-printW :: CW a -> FList Char
-printW = printW'
-  where
-    printW' :: CW a -> FList Char
-    printW' w =
-      wordLine w
-        [ printID'
-        , printFORM
-        , printLEMMA
-        , printUPOS'
-        , printXPOS
-        , printFEATS'
-        , printHEAD
-        , printDEPREL'
-        , printDEPS'
-        , printMISC
-        ]
-    wordLine :: CW a -> [CW a -> String] -> FList Char
-    wordLine w = toFList . intercalate "\t" . map (\f -> f w)
-    printID' = printID . _id
-    printMStr = fromMaybe "_"
-    printFORM = printMStr . _form
-    printLEMMA = printMStr . _lemma
-    printUPOS' = printUPOS . _upos
-    printXPOS = printMStr . _xpos
-    printFEATS' = printFEATS . _feats
-    printHEAD = maybe "_" (printID . _head) . _rel
-    printDEPREL' =
-      maybe "_" (\r -> printDEPREL (_deprel r) (_subdep r)) . _rel
-    printDEPS' = printDEPS . _deps
-    printMISC = printMStr . _misc
-
+printWords :: [CW a]  ->  [[T.Text]]
+-- | reconstructs the 10 fields from parsed representation
+printWords cw =  (<$> cw) <$>
+                [ printID        . _id
+                , fromMaybe "_"  . _form 
+                , fromMaybe "_"  . _lemma 
+                , printUPOS      . _upos  
+                , printXPOS      . _xpos  
+                , printFEATS     . _feats 
+                , printHEAD      . _rel   
+                , printDEPREL    . _rel   
+--                , printDEPS    . _deps  
+                , printMISC      . _misc]
 ---
 -- field printers
-printID :: ID -> String
+printID :: ID -> T.Text
 printID id' =
-  case id' of
-    SID i -> show i
-    MID s e -> concat [show s, "-", show e]
-    EID i e -> concat [show i, ".", show e]
+    case id' of
+      SID id1     -> T.pack $ show id1
+      MID id1 id2 -> T.pack $ show id1 <> "-" <>  show id2
+      EID id1 id2 -> T.pack $ show id1 <> "." <>  show id2
 
-printUPOS :: UPOS -> String
-printUPOS Nothing = "_"
-printUPOS (Just pos) = show pos
+printUPOS :: UPOS -> T.Text
+printUPOS    upos =  T.pack $ maybe "_" show upos
 
-printFEATS :: FEATS -> String
+printXPOS :: XPOS -> T.Text
+printXPOS    xpos =  T.toLower . T.pack $ maybe "_" show xpos
+
+printFEATS :: FEATS -> T.Text
 printFEATS = printList printFeat
   where
     printFeat Feat {_feat = f, _featValues = vs, _featType = mft} =
-      let fts = maybe "" (\ft -> "[" ++ ft ++ "]") mft
-      in concat [f, fts, "=", intercalate "," vs]
+      let fts = maybe "" (\ft -> "[" <> ft <> "]") mft
+      in f <> fts <> "=" <> T.intercalate "," vs
 
-printDEPREL :: D.EP -> Maybe String -> String
-printDEPREL dr sdr =
-  downcaseStr $ show dr ++ maybe "" (":" ++) sdr
+printHEAD :: Maybe Rel -> T.Text
+printHEAD    Nothing   =  "_"
+printHEAD   (Just rel) = printID (_head rel)
 
-printDEPS :: DEPS -> String
-printDEPS =
-  printList
-    (\r ->
-       intercalate
-         ":"
-         ([printID (_head r), printDEPREL (_deprel r) (_subdep r)] ++
-          fromMaybe [] (_rest r)))
+printDEPREL :: Maybe Rel -> T.Text
+printDEPREL   rel = deprel <> subdep
+  where
+    deprel = T.toLower . T.pack $ maybe "_" (show . _deprel) rel
+    subdep =  maybe "" (maybe "" (":" <>) . _subdep) rel
+
+
+{-
+printDEPS :: DEPS -> T.Text -- DEPS = [REL]
+printDEPS deps = (\x y z -> T.intercalate ":" [x,y,z]) 
+              <$> printHEAD 
+              <*> printDEPREL 
+              <*> (T.intercalate ":" <$> printREST) 
+              <$> listToMaybe . deps
+-}
+
+
+{-
+ (<$> (listToMaybe <$> deps)) <$> [
+  printHEAD, printDEPREL, T.intercalate ":" <$> printREST]
+  
+(\x y z -> T.intercalate ":" [x,y,z]) <$> printHEAD <*> printDEPREL <*> (T.intercalate ":" <$> printREST) <$> (listToMaybe <$> (_deps <$> cw))
+ 
+-}
+
+printREST :: Maybe Rel -> [T.Text]
+printREST = fromMaybe [] <$> _rest . fromJust
+
+printMISC :: MISC -> T.Text
+printMISC = T.pack . maybe "" show
 
 ---
 -- utility printers
-printList :: (a -> String) -> [a] -> String
-printList f = nullToStr . intercalate "|" . map f
+printList :: (a -> T.Text) -> [a] -> T.Text
+printList f = nullToStr . T.intercalate "|" . map f
   where
-    nullToStr :: String -> String
+    nullToStr :: T.Text -> T.Text
     nullToStr xs =
-      if null xs
+      if T.null xs
         then "_"
         else xs
 
-diffLSpace :: FList Char
-diffLSpace = toFList "\n"
+
+
